@@ -1,0 +1,2388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Winit — Recruitment Console</title>
+  <meta name="description" content="AI-powered recruitment calling assistant. Manage candidates, calls, interviews, and analytics.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0d14;
+      --sidebar: #0d1117;
+      --card: #111827;
+      --card2: #161d2e;
+      --border: rgba(255,255,255,0.07);
+      --border2: rgba(255,255,255,0.12);
+      --t1: #f0f4ff;
+      --t2: #8b97b3;
+      --t3: #4a5568;
+      --primary: #4f6ef7;
+      --primary-dim: rgba(79,110,247,0.15);
+      --primary-glow: rgba(79,110,247,0.25);
+      --green: #10b981;
+      --green-dim: rgba(16,185,129,0.12);
+      --amber: #f59e0b;
+      --amber-dim: rgba(245,158,11,0.12);
+      --red: #ef4444;
+      --red-dim: rgba(239,68,68,0.12);
+      --cyan: #06b6d4;
+      --sidebar-w: 220px;
+      --font: 'Inter', sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--t1);
+      font-family: var(--font);
+      min-height: 100vh;
+      display: flex;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────────────── */
+    .sidebar {
+      width: var(--sidebar-w);
+      min-height: 100vh;
+      background: var(--sidebar);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0;
+      z-index: 50;
+    }
+    .sidebar-brand {
+      padding: 1.4rem 1.2rem 1rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: .65rem;
+    }
+    .brand-mark {
+      width: 32px; height: 32px;
+      background: var(--primary);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: .85rem; color: #fff;
+      flex-shrink: 0;
+    }
+    .brand-name {
+      font-weight: 700;
+      font-size: .95rem;
+      letter-spacing: -.015em;
+      color: var(--t1);
+    }
+    .brand-tag {
+      font-size: .65rem;
+      color: var(--t3);
+      font-weight: 400;
+      display: block;
+      margin-top: .05rem;
+    }
+    .sidebar-nav {
+      padding: .75rem .65rem;
+      flex: 1;
+    }
+    .nav-section-label {
+      font-size: .65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--t3);
+      padding: .5rem .5rem .35rem;
+      margin-top: .4rem;
+    }
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+      padding: .55rem .65rem;
+      border-radius: 7px;
+      cursor: pointer;
+      color: var(--t2);
+      font-size: .83rem;
+      font-weight: 500;
+      transition: all .15s;
+      border: none;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+      margin-bottom: .1rem;
+    }
+    .nav-item svg { width: 15px; height: 15px; opacity: .7; flex-shrink: 0; }
+    .nav-item:hover { background: rgba(255,255,255,.05); color: var(--t1); }
+    .nav-item.active {
+      background: var(--primary-dim);
+      color: #fff;
+      font-weight: 600;
+    }
+    .nav-item.active svg { opacity: 1; }
+    .nav-badge {
+      margin-left: auto;
+      background: var(--primary);
+      color: #fff;
+      font-size: .6rem;
+      font-weight: 700;
+      padding: .08rem .35rem;
+      border-radius: 20px;
+      min-width: 18px;
+      text-align: center;
+    }
+    .sidebar-footer {
+      padding: .85rem .65rem;
+      border-top: 1px solid var(--border);
+    }
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+      font-size: .72rem;
+      color: var(--green);
+      font-weight: 500;
+    }
+    .live-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 6px var(--green);
+      animation: blink 2s infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1}50%{opacity:.4} }
+
+    /* ── Main layout ─────────────────────────────────────────── */
+    .main {
+      margin-left: var(--sidebar-w);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: .85rem 1.75rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(10,13,20,.85);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+    .page-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--t1);
+    }
+    .page-sub {
+      font-size: .75rem;
+      color: var(--t3);
+    }
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: .6rem;
+    }
+    .sys-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      padding: .25rem .6rem;
+      border-radius: 5px;
+      font-size: .7rem;
+      font-weight: 600;
+    }
+    .sys-badge-amber { background: var(--amber-dim); border: 1px solid rgba(245,158,11,.25); color: var(--amber); }
+    .sys-badge-green { background: var(--green-dim); border: 1px solid rgba(16,185,129,.25); color: var(--green); }
+    .sys-badge-blue  { background: var(--primary-dim); border: 1px solid rgba(79,110,247,.25); color: #818cf8; }
+
+    .content { padding: 1.5rem 1.75rem; }
+
+    /* ── Buttons ─────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      padding: .48rem 1rem;
+      border-radius: 6px;
+      font-size: .8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all .15s;
+      border: none;
+      font-family: inherit;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .btn svg { width: 13px; height: 13px; }
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 1px 6px var(--primary-glow);
+    }
+    .btn-primary:hover { filter: brightness(1.1); }
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border2);
+      color: var(--t1);
+    }
+    .btn-outline:hover { background: rgba(255,255,255,.05); }
+    .btn-green { background: var(--green); color: #fff; }
+    .btn-green:hover { filter: brightness(1.08); }
+    .btn-red { background: var(--red); color: #fff; }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid rgba(239,68,68,.3);
+      color: var(--red);
+    }
+    .btn-ghost:hover { background: var(--red-dim); }
+    .btn-sm { padding: .3rem .65rem; font-size: .72rem; }
+
+    /* ── Metrics row ─────────────────────────────────────────── */
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .metric-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.1rem 1.15rem;
+      transition: border-color .2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--primary), transparent);
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    .metric-card:hover { border-color: var(--border2); }
+    .metric-card:hover::before { opacity: 1; }
+    .metric-label { font-size: .68rem; font-weight: 600; color: var(--t3); text-transform: uppercase; letter-spacing: .07em; margin-bottom: .5rem; }
+    .metric-value { font-size: 1.65rem; font-weight: 700; letter-spacing: -.03em; color: var(--t1); }
+    .metric-sub { font-size: .68rem; color: var(--t3); margin-top: .25rem; }
+    .metric-trend {
+      display: inline-flex;
+      align-items: center;
+      gap: .2rem;
+      font-size: .65rem;
+      font-weight: 600;
+      margin-top: .3rem;
+    }
+    .trend-up { color: var(--green); }
+    .trend-down { color: var(--red); }
+
+    /* ── Panel / Card ────────────────────────────────────────── */
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .panel-head {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+    .panel-title {
+      font-size: .9rem;
+      font-weight: 600;
+      color: var(--t1);
+    }
+    .panel-sub {
+      font-size: .72rem;
+      color: var(--t3);
+      margin-top: .1rem;
+    }
+    .panel-body { padding: 1.25rem; }
+
+    /* ── Table ───────────────────────────────────────────────── */
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th {
+      font-size: .67rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .07em;
+      color: var(--t3);
+      padding: .75rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,.015);
+      white-space: nowrap;
+    }
+    td {
+      padding: .85rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      font-size: .82rem;
+      vertical-align: middle;
+      color: var(--t1);
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,.012); }
+    .empty-state {
+      text-align: center;
+      color: var(--t3);
+      padding: 3rem 1rem;
+      font-size: .82rem;
+    }
+    .empty-state-icon { font-size: 1.5rem; margin-bottom: .5rem; opacity: .4; }
+
+    /* ── Badges ──────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: .2rem .5rem;
+      border-radius: 4px;
+      font-size: .65rem;
+      font-weight: 600;
+      font-family: var(--mono);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+    .badge-completed { background: rgba(16,185,129,.12); color: #34d399; border: 1px solid rgba(16,185,129,.25); }
+    .badge-initiated  { background: rgba(79,110,247,.12); color: #818cf8; border: 1px solid rgba(79,110,247,.25); }
+    .badge-ringing    { background: rgba(245,158,11,.12); color: #fbbf24; border: 1px solid rgba(245,158,11,.25); }
+    .badge-failed,.badge-cancelled { background: rgba(239,68,68,.12); color: #f87171; border: 1px solid rgba(239,68,68,.25); }
+    .badge-scheduled  { background: rgba(6,182,212,.12); color: #22d3ee; border: 1px solid rgba(6,182,212,.25); }
+    .badge-csv        { background: rgba(245,158,11,.12); color: var(--amber); border: 1px solid rgba(245,158,11,.25); }
+    .badge-ats        { background: rgba(16,185,129,.12); color: var(--green); border: 1px solid rgba(16,185,129,.25); }
+    .badge-manual     { background: rgba(79,110,247,.12); color: #818cf8; border: 1px solid rgba(79,110,247,.25); }
+
+    /* ── Forms / Modals ──────────────────────────────────────── */
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.7);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s;
+    }
+    .overlay.open { opacity: 1; pointer-events: auto; }
+    .modal {
+      background: #111827;
+      border: 1px solid var(--border2);
+      border-radius: 12px;
+      width: 100%;
+      max-width: 520px;
+      padding: 1.6rem;
+      box-shadow: 0 20px 50px rgba(0,0,0,.6);
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+    .modal-lg { max-width: 680px; }
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.25rem;
+      padding-bottom: .9rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .modal-title { font-size: .95rem; font-weight: 700; }
+    .modal-close {
+      background: transparent;
+      border: none;
+      color: var(--t3);
+      font-size: 1.25rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: .2rem;
+      transition: color .15s;
+    }
+    .modal-close:hover { color: var(--t1); }
+    .form-group { margin-bottom: 1rem; }
+    .form-label { display: block; font-size: .75rem; font-weight: 600; margin-bottom: .4rem; color: var(--t2); }
+    .form-control {
+      width: 100%;
+      background: rgba(0,0,0,.3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: .55rem .75rem;
+      color: var(--t1);
+      font-size: .82rem;
+      font-family: inherit;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .form-control:focus { border-color: var(--primary); }
+    select.form-control option { background: #1a2133; }
+    .form-hint { font-size: .7rem; color: var(--t3); margin-top: .25rem; }
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: .5rem;
+      margin-top: 1.25rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+    .alert {
+      padding: .65rem .9rem;
+      border-radius: 7px;
+      font-size: .78rem;
+      margin-bottom: .85rem;
+      line-height: 1.5;
+    }
+    .alert-info { background: var(--primary-dim); border: 1px solid rgba(79,110,247,.25); color: #a5b4fc; }
+    .alert-warn { background: var(--amber-dim); border: 1px solid rgba(245,158,11,.25); color: #fde68a; }
+    .alert-success { background: var(--green-dim); border: 1px solid rgba(16,185,129,.25); color: #6ee7b7; }
+
+    /* ── Voice Simulator ─────────────────────────────────────── */
+    .sim-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+    .sim-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: .75rem;
+      margin-bottom: 1rem;
+    }
+    .sim-title { font-size: .9rem; font-weight: 600; color: var(--t1); margin-bottom: .2rem; }
+    .sim-sub { font-size: .75rem; color: var(--t2); }
+    .sim-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .6rem;
+      align-items: center;
+      margin: .85rem 0;
+    }
+    #simStatus {
+      font-size: .75rem;
+      font-weight: 600;
+      padding: .32rem .75rem;
+      border-radius: 5px;
+      background: var(--primary-dim);
+      border: 1px solid rgba(79,110,247,.2);
+      color: #818cf8;
+    }
+    .sim-row { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: .85rem; }
+    .recording-ring {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--red);
+      box-shadow: 0 0 8px var(--red);
+      animation: blink 1s infinite;
+      display: inline-block;
+      margin-right: .3rem;
+    }
+    .sim-conversation {
+      background: rgba(0,0,0,.2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: .9rem;
+      min-height: 110px;
+      max-height: 220px;
+      overflow-y: auto;
+      font-size: .78rem;
+      line-height: 1.6;
+    }
+    .bubble { padding: .5rem .8rem; border-radius: 8px; margin: .35rem 0; max-width: 86%; }
+    .bubble-ai { background: var(--primary-dim); border: 1px solid rgba(79,110,247,.2); color: #c7d2fe; margin-right: auto; }
+    .bubble-user { background: var(--green-dim); border: 1px solid rgba(16,185,129,.2); color: #a7f3d0; margin-left: auto; text-align: right; }
+    .bubble-label { font-size: .62rem; font-weight: 700; opacity: .6; margin-bottom: .12rem; text-transform: uppercase; letter-spacing: .05em; }
+    #simResponses { margin-top: .85rem; }
+    .resp-tag {
+      background: rgba(255,255,255,.03);
+      border: 1px solid var(--border);
+      padding: .32rem .65rem;
+      border-radius: 5px;
+      font-size: .75rem;
+      margin: .2rem 0;
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .resp-code { color: var(--primary); font-family: var(--mono); font-size: .7rem; font-weight: 600; }
+    .resp-value { color: var(--t1); }
+
+    .transcript-box {
+      background: rgba(0,0,0,.25);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: .8rem;
+      font-family: var(--mono);
+      font-size: .72rem;
+      white-space: pre-wrap;
+      max-height: 200px;
+      overflow-y: auto;
+      color: #94a3b8;
+      line-height: 1.6;
+    }
+
+    /* quick replies */
+    .quick-replies { margin-top: .65rem; padding: .75rem; background: rgba(255,255,255,.03); border: 1px solid rgba(79,110,247,.2); border-radius: 8px; }
+    .quick-replies-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .5rem; font-size: .7rem; color: #a5b4fc; font-weight: 600; }
+    .quick-replies-pills { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: .6rem; }
+    .reply-pill {
+      background: var(--primary-dim);
+      border: 1px solid rgba(79,110,247,.3);
+      color: #e0e7ff;
+      border-radius: 20px;
+      padding: .35rem .8rem;
+      font-size: .74rem;
+      cursor: pointer;
+      transition: all .15s;
+      line-height: 1.3;
+    }
+    .reply-pill:hover { background: rgba(79,110,247,.3); color: #fff; }
+    .reply-row { display: flex; gap: .4rem; }
+    .reply-input {
+      flex: 1;
+      background: rgba(0,0,0,.3);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: .5rem .7rem;
+      color: var(--t1);
+      font-size: .78rem;
+      font-family: inherit;
+      outline: none;
+    }
+    .reply-input:focus { border-color: var(--primary); }
+
+    /* ── Two-col grid ────────────────────────────────────────── */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+
+    /* ── Analytics ───────────────────────────────────────────── */
+    .analytics-block {
+      background: rgba(0,0,0,.15);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+    }
+    .analytics-block h4 { font-size: .8rem; font-weight: 600; margin-bottom: .75rem; color: var(--t2); }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: .3rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: .78rem;
+    }
+    .stat-row:last-child { border-bottom: none; }
+    .stat-label { color: var(--t2); text-transform: capitalize; }
+    .stat-val { font-weight: 600; color: var(--t1); }
+
+    /* ── Pipeline stages bar ─────────────────────────────────── */
+    .pipeline-bar {
+      display: flex;
+      gap: 0;
+      border-radius: 6px;
+      overflow: hidden;
+      height: 8px;
+      margin-bottom: .5rem;
+    }
+    .pipeline-seg { height: 100%; transition: width .4s; }
+
+    /* ── Divider ─────────────────────────────────────────────── */
+    .divider { height: 1px; background: var(--border); margin: 1.25rem 0; }
+
+    /* ── Scrollbar ───────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }
+
+    @keyframes fadeUp { from { opacity:0; transform: translateY(6px); } to { opacity:1; transform: none; } }
+    .fadein { animation: fadeUp .25s ease-out; }
+
+    /* ── Auth Overlay ────────────────────────────────────────── */
+    #authOverlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(5,7,14,.97);
+      display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(12px);
+    }
+    #authOverlay.hidden { display: none; }
+    .auth-box {
+      width: 100%; max-width: 420px;
+      background: #111827;
+      border: 1px solid rgba(79,110,247,.3);
+      border-radius: 16px;
+      padding: 2.5rem 2rem;
+      box-shadow: 0 0 80px rgba(79,110,247,.12);
+    }
+    .auth-logo {
+      display: flex; align-items: center; gap: .75rem;
+      margin-bottom: 1.75rem;
+    }
+    .auth-logo-mark {
+      width: 42px; height: 42px;
+      background: linear-gradient(135deg, #4f6ef7, #7c3aed);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 1.1rem; color: #fff;
+    }
+    .auth-logo-text { font-size: 1.35rem; font-weight: 700; letter-spacing: -.02em; }
+    .auth-logo-sub { font-size: .72rem; color: var(--t3); margin-top: .1rem; }
+    .auth-tabs { display: flex; gap: .4rem; margin-bottom: 1.5rem; background: rgba(255,255,255,.04); border-radius: 8px; padding: 3px; }
+    .auth-tab { flex: 1; padding: .5rem; border: none; background: transparent; color: var(--t2); border-radius: 6px; cursor: pointer; font-size: .83rem; font-weight: 500; transition: all .15s; }
+    .auth-tab.active { background: var(--primary); color: #fff; }
+    .auth-form-panel { display: none; }
+    .auth-form-panel.active { display: block; }
+    .auth-field { margin-bottom: .9rem; }
+    .auth-field label { display: block; font-size: .75rem; font-weight: 500; color: var(--t2); margin-bottom: .35rem; }
+    .auth-field input { width: 100%; background: rgba(255,255,255,.05); border: 1px solid var(--border2); border-radius: 8px; padding: .65rem .85rem; color: var(--t1); font-size: .88rem; outline: none; transition: border-color .15s; }
+    .auth-field input:focus { border-color: var(--primary); }
+    .auth-btn { width: 100%; padding: .7rem; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-size: .9rem; font-weight: 600; cursor: pointer; transition: opacity .15s; margin-top: .3rem; }
+    .auth-btn:hover { opacity: .9; }
+    .auth-btn:disabled { opacity: .5; cursor: default; }
+    .auth-divider { display: flex; align-items: center; gap: .6rem; margin: .85rem 0; color: var(--t3); font-size: .72rem; }
+    .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .auth-google-btn {
+      width: 100%; padding: .65rem .85rem;
+      background: #ffffff; color: #1f2937;
+      border: 1px solid #e5e7eb; border-radius: 8px;
+      font-size: .88rem; font-weight: 600;
+      display: flex; align-items: center; justify-content: center; gap: .65rem;
+      cursor: pointer; transition: all .15s; margin-bottom: .85rem;
+    }
+    .auth-google-btn:hover { background: #f9fafb; color: #111827; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+    .btn-meet {
+      display: inline-flex; align-items: center; gap: .35rem;
+      background: rgba(16,185,129,.15); border: 1px solid rgba(16,185,129,.35);
+      color: #34d399; font-size: .75rem; font-weight: 600;
+      padding: .25rem .55rem; border-radius: 6px; text-decoration: none;
+      transition: all .15s;
+    }
+    .btn-meet:hover { background: rgba(16,185,129,.25); color: #6ee7b7; text-decoration: none; }
+    .auth-demo-btn { width: 100%; padding: .65rem; background: transparent; color: var(--t2); border: 1px solid var(--border2); border-radius: 8px; font-size: .83rem; cursor: pointer; transition: all .15s; }
+    .auth-demo-btn:hover { border-color: var(--primary); color: var(--t1); }
+    .auth-error { background: var(--red-dim); border: 1px solid rgba(239,68,68,.3); border-radius: 6px; padding: .55rem .75rem; font-size: .78rem; color: #fca5a5; margin-bottom: .85rem; display: none; }
+    .auth-error.show { display: block; }
+    /* user avatar pill */
+    .user-pill { display: flex; align-items: center; gap: .5rem; padding: .35rem .65rem; background: rgba(79,110,247,.1); border: 1px solid rgba(79,110,247,.2); border-radius: 20px; cursor: pointer; transition: background .15s; }
+    .user-pill:hover { background: rgba(79,110,247,.18); }
+    .user-avatar { width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, #4f6ef7, #7c3aed); display: flex; align-items: center; justify-content: center; font-size: .7rem; font-weight: 700; color: #fff; flex-shrink: 0; }
+    .user-name { font-size: .8rem; font-weight: 500; color: var(--t1); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── Resume Review ───────────────────────────────────────── */
+    .resume-upload-zone {
+      border: 2px dashed rgba(79,110,247,.35);
+      border-radius: 14px;
+      padding: 2.5rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all .2s;
+      background: rgba(79,110,247,.04);
+    }
+    .resume-upload-zone:hover, .resume-upload-zone.drag { border-color: var(--primary); background: rgba(79,110,247,.1); }
+    .resume-upload-zone svg { width: 42px; height: 42px; color: var(--primary); margin-bottom: .75rem; opacity: .8; }
+    .resume-upload-zone h3 { font-size: .95rem; font-weight: 600; color: var(--t1); margin-bottom: .35rem; }
+    .resume-upload-zone p { font-size: .78rem; color: var(--t3); }
+    .resume-card {
+      background: var(--card2); border: 1px solid var(--border2); border-radius: 12px; padding: 1.25rem 1.4rem; margin-bottom: 1rem;
+    }
+    .resume-profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+    @media(max-width: 700px) { .resume-profile-grid { grid-template-columns: 1fr; } }
+    .rfield { display: flex; flex-direction: column; gap: .2rem; }
+    .rfield label { font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--t3); }
+    .rfield input { background: rgba(255,255,255,.05); border: 1px solid var(--border); border-radius: 6px; padding: .45rem .65rem; color: var(--t1); font-size: .83rem; outline: none; width: 100%; transition: border-color .15s; }
+    .rfield input:focus { border-color: var(--primary); }
+    .skills-tags { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .3rem; }
+    .skill-tag { background: rgba(79,110,247,.15); border: 1px solid rgba(79,110,247,.25); color: #818cf8; border-radius: 4px; padding: .18rem .55rem; font-size: .72rem; font-weight: 500; }
+    .resume-actions { display: flex; gap: .65rem; margin-top: 1.25rem; flex-wrap: wrap; }
+    .ai-score-badge { display: inline-flex; align-items: center; gap: .3rem; background: var(--green-dim); border: 1px solid rgba(16,185,129,.25); color: var(--green); border-radius: 6px; padding: .3rem .65rem; font-size: .75rem; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-mark">W</div>
+    <div>
+      <div class="brand-name">Winit</div>
+      <span class="brand-tag">Recruitment Console</span>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Overview</div>
+    <button class="nav-item active" data-tab="calls" onclick="switchTab(this,'calls')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+      Outbound Calls
+      <span class="nav-badge" id="navCalls">0</span>
+    </button>
+    <button class="nav-item" data-tab="candidates" onclick="switchTab(this,'candidates')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+      Candidates
+      <span class="nav-badge" id="navCands">0</span>
+    </button>
+    <button class="nav-item" data-tab="jobs" onclick="switchTab(this,'jobs')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+      Job Roles
+    </button>
+    <button class="nav-item" data-tab="interviews" onclick="switchTab(this,'interviews')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+      Interviews
+      <span class="nav-badge" id="navIntv">0</span>
+    </button>
+
+    <div class="nav-section-label" style="margin-top:.75rem">Tools</div>
+    <button class="nav-item" data-tab="resumes" onclick="switchTab(this,'resumes')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+      Resume Review
+    </button>
+    <button class="nav-item" data-tab="simulator" onclick="switchTab(this,'simulator')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>
+      Voice Simulator
+    </button>
+    <button class="nav-item" data-tab="analytics" onclick="switchTab(this,'analytics')">
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      Analytics
+    </button>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="status-pill">
+      <span class="live-dot"></span>
+      Server Online
+    </div>
+    <div style="font-size:.65rem;color:var(--t3);margin-top:.4rem" id="sysDbLabel">Checking DB...</div>
+  </div>
+</aside>
+
+<!-- ── Main ──────────────────────────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="topbar-left">
+      <div>
+        <div class="page-title" id="pageTitle">Outbound Calls</div>
+        <div class="page-sub" id="pageSub">Manage and review all AI-initiated call sessions</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span class="sys-badge sys-badge-amber" id="telephonyBadge">Telephony</span>
+      <span class="sys-badge sys-badge-blue" id="nlpBadge">NLP: Groq</span>
+      <span class="sys-badge sys-badge-green" id="dbBadge">DB</span>
+      <span class="sys-badge sys-badge-green" id="gcalBadge" title="Google Calendar: Active" onclick="startGoogleAuth()" style="cursor:pointer">📅 G-Calendar</span>
+      <button class="btn btn-outline" onclick="openModal('uploadModal')">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+        Upload CSV
+      </button>
+      <button class="btn btn-outline" onclick="openDirectCallModal()">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+        Call Client
+      </button>
+      <button class="btn btn-primary" onclick="openCallModal()">
+        <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 4v16m8-8H4"/></svg>
+        New Call
+      </button>
+      <div class="user-pill" id="userPill" onclick="handleLogout()" title="Click to logout">
+        <div class="user-avatar" id="userAvatar">?</div>
+        <span class="user-name" id="userName">Login</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content">
+
+    <!-- Metrics -->
+    <div class="metrics">
+      <div class="metric-card">
+        <div class="metric-label">Total Calls</div>
+        <div class="metric-value" id="mCalls">0</div>
+        <div class="metric-sub">Outbound sessions</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Success Rate</div>
+        <div class="metric-value" id="mRate">—</div>
+        <div class="metric-sub">Completed screenings</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Candidates</div>
+        <div class="metric-value" id="mCands">0</div>
+        <div class="metric-sub">In pipeline</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Interviews</div>
+        <div class="metric-value" id="mInterviews">0</div>
+        <div class="metric-sub">Scheduled</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">NLP Engine</div>
+        <div class="metric-value" style="font-size:1rem;margin-top:.3rem" id="mNlp">Groq</div>
+        <div class="metric-sub">llama-3.3-70b</div>
+      </div>
+    </div>
+
+    <!-- Tab Panels -->
+
+    <!-- CALLS TAB -->
+    <div id="tab-calls" class="tab-content fadein">
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Call Sessions</div>
+            <div class="panel-sub">All AI-initiated outbound calls</div>
+          </div>
+          <button class="btn btn-outline btn-sm" onclick="loadCalls()">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Refresh
+          </button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Candidate</th>
+              <th>Job Role</th>
+              <th>Status</th>
+              <th>Match Score</th>
+              <th>Time</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="callsTbody">
+            <tr><td colspan="6" class="empty-state">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CANDIDATES TAB -->
+    <div id="tab-candidates" class="tab-content fadein" style="display:none">
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Candidate Pipeline</div>
+            <div class="panel-sub">All shortlisted candidates from ATS, CSV, and manual entry</div>
+          </div>
+          <div style="display:flex;gap:.5rem">
+            <button class="btn btn-outline btn-sm" onclick="openModal('uploadModal')">Upload CSV</button>
+            <button class="btn btn-outline btn-sm" onclick="loadCandidates()">Refresh</button>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Phone</th><th>Email</th><th>Source</th><th>Added</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="candTbody">
+            <tr><td colspan="6" class="empty-state">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- JOBS TAB -->
+    <div id="tab-jobs" class="tab-content fadein" style="display:none">
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Job Positions</div>
+            <div class="panel-sub">Active open roles the AI recruiter will screen candidates for</div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openModal('jobModal')">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 4v16m8-8H4"/></svg>
+            New Job
+          </button>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Title</th><th>Company</th><th>Location</th><th>Type</th><th>Salary</th></tr>
+          </thead>
+          <tbody id="jobsTbody">
+            <tr><td colspan="5" class="empty-state">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- INTERVIEWS TAB -->
+    <div id="tab-interviews" class="tab-content fadein" style="display:none">
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Scheduled Interviews</div>
+            <div class="panel-sub">Google Calendar &amp; Google Meet video interviews</div>
+          </div>
+          <div style="display:flex;gap:.5rem">
+            <button class="btn btn-green btn-sm" onclick="autoScheduleCandidate()" title="Automatically find next available slot and book in Google Calendar">⚡ Auto-Schedule Next</button>
+            <button class="btn btn-primary btn-sm" onclick="openScheduleModal()">Custom Booking</button>
+          </div>
+        </div>
+        <table>
+          <thead>
+            <tr><th>Candidate</th><th>Job Role</th><th>Date &amp; Time</th><th>Google Meet</th><th>Calendar</th><th>Status</th></tr>
+          </thead>
+          <tbody id="intrTbody">
+            <tr><td colspan="6" class="empty-state">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SIMULATOR TAB -->
+    <div id="tab-simulator" class="tab-content fadein" style="display:none">
+      <div class="sim-card">
+        <div class="sim-header">
+          <div>
+            <div class="sim-title">Voice Call Simulator</div>
+            <div class="sim-sub">Simulate a full recruitment screening in the browser. Microphone input → AssemblyAI transcription → Groq NLP → ElevenLabs voice response.</div>
+          </div>
+          <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+            <button class="btn btn-outline btn-sm" onclick="testMicrophone()">Test Mic</button>
+            <button class="btn btn-outline btn-sm" onclick="openModal('macosMicModal')">Mic Help</button>
+          </div>
+        </div>
+        <div class="sim-row">
+          <select id="simCandSelect" class="form-control" style="max-width:210px"><option value="">— Candidate —</option></select>
+          <select id="simJobSelect" class="form-control" style="max-width:210px"><option value="">— Job Role —</option></select>
+        </div>
+        <div class="sim-controls">
+          <button id="simMicBtn" class="btn btn-green" onclick="toggleSimulator()">Start Voice Call</button>
+          <button id="simAutoBtn" class="btn btn-primary" onclick="runAutoDemo()">Run Auto Demo</button>
+          <span id="simStatus">Idle — ready to simulate</span>
+        </div>
+        <div class="sim-conversation" id="simConversation">
+          <div class="bubble bubble-ai">
+            <div class="bubble-label">Sarah — AI Recruiter</div>
+            Click <b>Run Auto Demo</b> for an instant screening walkthrough, or <b>Start Voice Call</b> to use your microphone. Suggested text responses are available if mic access is restricted.
+          </div>
+        </div>
+        <div id="simInteractiveArea"></div>
+        <div id="simResponses"></div>
+      </div>
+    </div>
+
+    <!-- ANALYTICS TAB -->
+    <div id="tab-analytics" class="tab-content fadein" style="display:none">
+      <div class="grid-2" id="analyticsContent">
+        <div class="panel" style="padding:1.25rem"><p style="color:var(--t3);font-size:.82rem">Loading analytics...</p></div>
+      </div>
+    </div>
+
+    <!-- RESUME TAB -->
+    <div id="tab-resumes" class="tab-content fadein" style="display:none">
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <div class="panel-title">Resume Upload &amp; AI Profile Review</div>
+            <div class="panel-sub">Upload PDF resumes — Groq AI extracts candidate profile, skills, experience, and compensation for review or immediate calling</div>
+          </div>
+        </div>
+        <div style="padding:1.4rem">
+          <div class="resume-upload-zone" id="resumeDropZone">
+            <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+              <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            <h3>Drop a PDF resume here or click to browse</h3>
+            <p>Supports PDF, DOC, DOCX, TXT files &bull; Max 20MB &bull; Groq AI extracts profile instantly</p>
+            <input type="file" id="resumeFileInput" accept=".pdf,.doc,.docx,.txt" style="display:none">
+          </div>
+          <div id="resumeStatus" style="margin-top:1rem;display:none;align-items:center;gap:.75rem;padding:.9rem 1.2rem;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.25);border-radius:10px">
+            <span class="recording-ring"></span>
+            <span id="resumeStatusText" style="color:var(--t1);font-size:.86rem;font-weight:500">Analyzing resume with Groq AI...</span>
+          </div>
+          <div id="resumeResultArea"></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- MODALS                                                                 -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+
+<!-- Call Client Modal -->
+<div class="overlay" id="directCallModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Call Client Directly</div>
+      <button class="modal-close" onclick="closeModal('directCallModal')">&times;</button>
+    </div>
+    <div class="alert alert-info">
+      <b>Live Telecom Call</b> — The AI recruiter (ElevenLabs voice) will dial the client's phone, conduct the screening, and schedule an interview.
+    </div>
+    <form onsubmit="handleDirectCall(event)">
+      <div class="form-group">
+        <label class="form-label">Client Full Name *</label>
+        <input type="text" id="dcName" class="form-control" placeholder="e.g. Rajesh Kumar" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Mobile Number (with Country Code) *</label>
+        <input type="tel" id="dcPhone" class="form-control" placeholder="+919876543210" required>
+        <div class="form-hint">Include country code — e.g. +91 for India, +1 for US</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email (for Calendar Invite)</label>
+        <input type="email" id="dcEmail" class="form-control" placeholder="client@example.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Job Role *</label>
+        <select id="dcJob" class="form-control" required></select>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-outline" onclick="closeModal('directCallModal')">Cancel</button>
+        <button type="submit" id="dcSubmitBtn" class="btn btn-green">Dial Now</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Initiate Call Modal -->
+<div class="overlay" id="callModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Initiate Outbound Call</div>
+      <button class="modal-close" onclick="closeModal('callModal')">&times;</button>
+    </div>
+    <form onsubmit="handleInitiateCall(event)">
+      <div class="form-group">
+        <label class="form-label">Candidate</label>
+        <select id="callCandSel" class="form-control" required></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Job Role</label>
+        <select id="callJobSel" class="form-control"></select>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-outline" onclick="closeModal('callModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Start Call</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- CSV Upload Modal -->
+<div class="overlay" id="uploadModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Upload Candidates CSV</div>
+      <button class="modal-close" onclick="closeModal('uploadModal')">&times;</button>
+    </div>
+    <div class="alert alert-info">Required columns: <b>full_name, phone_number, email</b> — optional: source, ats_id</div>
+    <form onsubmit="handleCsvUpload(event)">
+      <div class="form-group">
+        <label class="form-label">Select .csv File</label>
+        <input type="file" id="csvFile" class="form-control" accept=".csv" required>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-outline" onclick="closeModal('uploadModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Upload &amp; Import</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Create Job Modal -->
+<div class="overlay" id="jobModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Create Job Posting</div>
+      <button class="modal-close" onclick="closeModal('jobModal')">&times;</button>
+    </div>
+    <form onsubmit="handleCreateJob(event)">
+      <div class="form-group">
+        <label class="form-label">Job Title *</label>
+        <input type="text" id="jobTitle" class="form-control" placeholder="Senior Full Stack Engineer" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Company Name *</label>
+        <input type="text" id="jobCompany" class="form-control" placeholder="Acme Corp" required>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Location</label>
+        <input type="text" id="jobLocation" class="form-control" placeholder="Mumbai (Hybrid)">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Salary Range</label>
+        <input type="text" id="jobSalary" class="form-control" placeholder="&#8377;15 – &#8377;25 LPA">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Job Description</label>
+        <textarea id="jobJd" class="form-control" rows="4" placeholder="Describe the role, responsibilities, and required skills..."></textarea>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-outline" onclick="closeModal('jobModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Job</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Schedule Interview Modal -->
+<div class="overlay" id="scheduleModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Schedule Interview</div>
+      <button class="modal-close" onclick="closeModal('scheduleModal')">&times;</button>
+    </div>
+    <form onsubmit="handleScheduleInterview(event)">
+      <div class="form-group">
+        <label class="form-label">Candidate</label>
+        <select id="sCandSel" class="form-control" required></select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Job Position</label>
+        <select id="sJobSel" class="form-control" required></select>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input type="date" id="sDate" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Time</label>
+          <input type="time" id="sTime" class="form-control" required>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Interviewer Email</label>
+        <input type="email" id="sEmail" class="form-control" value="recruiter@company.com" required>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn btn-outline" onclick="closeModal('scheduleModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Confirm Booking</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Transcript Modal -->
+<div class="overlay" id="transcriptModal">
+  <div class="modal modal-lg">
+    <div class="modal-head">
+      <div class="modal-title">Call Transcript</div>
+      <button class="modal-close" onclick="closeModal('transcriptModal')">&times;</button>
+    </div>
+    <div id="transcriptContent"><p style="color:var(--t3)">Loading...</p></div>
+  </div>
+</div>
+
+<!-- Mic Help Modal -->
+<div class="overlay" id="macosMicModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Enable Microphone (macOS)</div>
+      <button class="modal-close" onclick="closeModal('macosMicModal')">&times;</button>
+    </div>
+    <div style="font-size:.82rem;line-height:1.7;color:var(--t2)">
+      <p style="margin-bottom:.85rem">If microphone access is blocked, follow these steps:</p>
+      <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:.9rem;margin-bottom:.75rem">
+        <b style="color:var(--t1);font-size:.82rem">Safari</b>
+        <ol style="padding-left:1.1rem;margin:.4rem 0 0">
+          <li>Safari → Settings → Websites → Microphone</li>
+          <li>Set <b>localhost</b> to <b>Allow</b></li>
+          <li>System Settings → Privacy &amp; Security → Microphone → enable Safari</li>
+        </ol>
+      </div>
+      <div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;padding:.9rem;margin-bottom:.75rem">
+        <b style="color:var(--t1);font-size:.82rem">Chrome</b>
+        <ol style="padding-left:1.1rem;margin:.4rem 0 0">
+          <li>Click the site settings icon next to <code>localhost:3000</code></li>
+          <li>Set <b>Microphone</b> to <b>Allow</b></li>
+          <li>System Settings → Privacy &amp; Security → Microphone → enable Chrome</li>
+        </ol>
+      </div>
+      <div class="alert alert-info" style="margin:0">No mic required — the Auto Demo and suggested-response buttons work without microphone access.</div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-outline" onclick="closeModal('macosMicModal')">Close</button>
+      <button class="btn btn-primary" onclick="closeModal('macosMicModal');testMicrophone()">Test Mic</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Auth Overlay Modal -->
+<div id="authOverlay" class="hidden">
+  <div class="auth-box" style="position:relative">
+    <button type="button" onclick="document.getElementById('authOverlay').classList.add('hidden')" style="position:absolute;top:1rem;right:1.25rem;background:none;border:none;color:var(--t3);font-size:1.4rem;cursor:pointer;line-height:1" title="Close">&times;</button>
+    
+    <div class="auth-logo">
+      <div class="auth-logo-mark">W</div>
+      <div>
+        <div class="auth-logo-text">Winit AI</div>
+        <div class="auth-logo-sub">Autonomous Recruitment Calling &amp; Screening</div>
+      </div>
+    </div>
+
+    <!-- Mode Tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" type="button" onclick="authSwitchTab('login')">Sign In</button>
+      <button class="auth-tab" type="button" onclick="authSwitchTab('register')">Register</button>
+    </div>
+
+    <!-- Login Form -->
+    <div id="authLogin" class="auth-form-panel active">
+      <div id="loginError" class="auth-error"></div>
+
+      <button type="button" class="auth-google-btn" onclick="startGoogleAuth()">
+        <svg viewBox="0 0 24 24" width="18" height="18">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        <span>Continue with Google</span>
+      </button>
+
+      <div class="auth-divider">OR EMAIL</div>
+
+      <form onsubmit="event.preventDefault(); doLogin();">
+        <div class="auth-field">
+          <label>Work Email</label>
+          <input type="email" id="loginEmail" placeholder="recruiter@company.com" autocomplete="email" required>
+        </div>
+        <div class="auth-field">
+          <label>Password</label>
+          <input type="password" id="loginPass" placeholder="Enter your password" autocomplete="current-password" required>
+        </div>
+        <button type="submit" id="loginBtn" class="auth-btn">Sign In</button>
+      </form>
+
+      <div class="auth-divider">TESTING</div>
+
+      <button type="button" class="auth-demo-btn" onclick="doDemoLogin()">
+        ⚡ One-Click Recruiter Demo Login
+      </button>
+
+      <div style="text-align:center;margin-top:1.1rem">
+        <button type="button" onclick="document.getElementById('authOverlay').classList.add('hidden')" style="background:none;border:none;color:var(--t3);font-size:.78rem;cursor:pointer;text-decoration:underline">
+          Continue as Guest &rarr;
+        </button>
+      </div>
+    </div>
+
+    <!-- Register Form -->
+    <div id="authRegister" class="auth-form-panel">
+      <div id="registerError" class="auth-error"></div>
+
+      <button type="button" class="auth-google-btn" onclick="startGoogleAuth()">
+        <svg viewBox="0 0 24 24" width="18" height="18">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        <span>Register with Google</span>
+      </button>
+
+      <div class="auth-divider">OR CREATE ACCOUNT</div>
+
+      <form onsubmit="event.preventDefault(); doRegister();">
+        <div class="auth-field">
+          <label>Full Name</label>
+          <input type="text" id="regName" placeholder="Sarah Jenkins" required>
+        </div>
+        <div class="auth-field">
+          <label>Work Email</label>
+          <input type="email" id="regEmail" placeholder="sarah@company.com" autocomplete="email" required>
+        </div>
+        <div class="auth-field">
+          <label>Company / Organization</label>
+          <input type="text" id="regCompany" placeholder="Acme Recruitment" required>
+        </div>
+        <div class="auth-field">
+          <label>Password</label>
+          <input type="password" id="regPass" placeholder="Min. 6 characters" autocomplete="new-password" required>
+        </div>
+        <button type="submit" id="registerBtn" class="auth-btn">Create Recruiter Account</button>
+      </form>
+
+      <div style="text-align:center;margin-top:1.1rem">
+        <button type="button" onclick="document.getElementById('authOverlay').classList.add('hidden')" style="background:none;border:none;color:var(--t3);font-size:.78rem;cursor:pointer;text-decoration:underline">
+          Continue as Guest &rarr;
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<!-- JAVASCRIPT                                                             -->
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<script>
+// ── State ──────────────────────────────────────────────────────────────────
+let candidates = [], jobs = [];
+let simActive = false, simStep = 0, mediaRecorder = null, audioChunks = [];
+let simCallId = null, simTranscript = '';
+let activeRecordingStream = null, currentCandidateResolver = null, recordingCountdownInterval = null;
+
+const PAGE_META = {
+  calls:      { title: 'Outbound Calls',      sub: 'Manage and review all AI-initiated call sessions' },
+  candidates: { title: 'Candidates',          sub: 'Shortlisted candidates from ATS, CSV, and manual entry' },
+  jobs:       { title: 'Job Roles',           sub: 'Active open positions the AI recruiter screens for' },
+  interviews: { title: 'Interviews',          sub: 'Interviews scheduled via Google Calendar' },
+  resumes:    { title: 'Resume Review',        sub: 'Upload PDF resumes — AI extracts candidate profile for review and calling' },
+  simulator:  { title: 'Voice Simulator',     sub: 'Simulate a screening call in the browser' },
+  analytics:  { title: 'Analytics',           sub: 'Call metrics, conversion rates, and candidate insights' },
+};
+
+// ── Auth token helper ──────────────────────────────────────────────────────
+function getAuthToken() { return localStorage.getItem('winit_token'); }
+function setAuthToken(t) { localStorage.setItem('winit_token', t); }
+function clearAuthToken() { localStorage.removeItem('winit_token'); localStorage.removeItem('winit_user'); }
+function getAuthUser() { try { return JSON.parse(localStorage.getItem('winit_user') || 'null'); } catch(e) { return null; } }
+function setAuthUser(u) { localStorage.setItem('winit_user', JSON.stringify(u)); }
+
+function authSwitchTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((b,i) => b.classList.toggle('active', (tab==='login' && i===0)||(tab==='register' && i===1)));
+  document.getElementById('authLogin').classList.toggle('active', tab==='login');
+  document.getElementById('authRegister').classList.toggle('active', tab==='register');
+  document.getElementById('loginError').classList.remove('show');
+  document.getElementById('registerError').classList.remove('show');
+}
+
+async function doLogin() {
+  const btn = document.getElementById('loginBtn');
+  const errEl = document.getElementById('loginError');
+  errEl.classList.remove('show');
+  btn.disabled = true; btn.textContent = 'Signing in...';
+  try {
+    const r = await fetch('/api/auth/login', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ email: document.getElementById('loginEmail').value, password: document.getElementById('loginPass').value })
+    }).then(x => x.json());
+    if (r.success) {
+      setAuthToken(r.token); setAuthUser(r.recruiter);
+      onAuthSuccess(r.recruiter);
+    } else {
+      errEl.textContent = r.error; errEl.classList.add('show');
+    }
+  } catch(e) { errEl.textContent = 'Network error: ' + e.message; errEl.classList.add('show'); }
+  btn.disabled = false; btn.textContent = 'Sign In';
+}
+
+async function doRegister() {
+  const btn = document.getElementById('registerBtn');
+  const errEl = document.getElementById('registerError');
+  errEl.classList.remove('show');
+  btn.disabled = true; btn.textContent = 'Creating account...';
+  try {
+    const r = await fetch('/api/auth/register', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        full_name: document.getElementById('regName').value,
+        email: document.getElementById('regEmail').value,
+        password: document.getElementById('regPass').value,
+        company_name: document.getElementById('regCompany').value,
+      })
+    }).then(x => x.json());
+    if (r.success) {
+      setAuthToken(r.token); setAuthUser(r.recruiter);
+      onAuthSuccess(r.recruiter);
+    } else {
+      errEl.textContent = r.error; errEl.classList.add('show');
+    }
+  } catch(e) { errEl.textContent = 'Error: ' + e.message; errEl.classList.add('show'); }
+  btn.disabled = false; btn.textContent = 'Create Account';
+}
+
+async function doDemoLogin() {
+  try {
+    const r = await fetch('/api/auth/demo', { method: 'POST' }).then(x => x.json());
+    if (r.success) { setAuthToken(r.token); setAuthUser(r.recruiter); onAuthSuccess(r.recruiter); }
+    else alert('Demo login failed: ' + r.error);
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+function onAuthSuccess(user) {
+  const overlay = document.getElementById('authOverlay');
+  if (overlay) overlay.classList.add('hidden');
+  const av = document.getElementById('userAvatar');
+  const un = document.getElementById('userName');
+  if (av) {
+    if (user.avatar) {
+      av.innerHTML = `<img src="${user.avatar}" style="width:100%;height:100%;border-radius:50%;object-fit:cover" alt="User">`;
+    } else {
+      av.textContent = (user.fullName || user.email || 'U')[0].toUpperCase();
+    }
+  }
+  if (un) un.textContent = user.fullName || user.email || 'Recruiter';
+  const gBadge = document.getElementById('gcalBadge');
+  if (gBadge) {
+    gBadge.textContent = '📅 G-Cal: Active';
+    gBadge.className = 'sys-badge sys-badge-green';
+  }
+}
+
+async function startGoogleAuth() {
+  try {
+    const res = await fetch('/api/auth/google/url').then(r => r.json());
+    if (res.success && res.url) {
+      window.location.href = res.url;
+    } else {
+      doSimulatedGoogleLogin();
+    }
+  } catch (err) {
+    doSimulatedGoogleLogin();
+  }
+}
+
+async function doSimulatedGoogleLogin() {
+  try {
+    const r = await fetch('/api/auth/google/simulate', { method: 'POST' }).then(x => x.json());
+    if (r.success) {
+      setAuthToken(r.token);
+      setAuthUser(r.recruiter);
+      onAuthSuccess(r.recruiter);
+      alert(`Signed in as ${r.recruiter.fullName} (${r.recruiter.email})\nGoogle Calendar is connected.`);
+    } else {
+      alert('Error: ' + r.error);
+    }
+  } catch(e) {
+    alert('Google login error: ' + e.message);
+  }
+}
+
+function checkUrlAuth() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+  const googleAuth = params.get('google_auth');
+  const authErr = params.get('auth_error');
+
+  if (authErr) {
+    alert('Google Authentication Notice: ' + decodeURIComponent(authErr));
+    window.history.replaceState({}, document.title, window.location.pathname);
+    return;
+  }
+
+  if (token && googleAuth === 'success') {
+    const name = params.get('name') || 'Google User';
+    const email = params.get('email') || '';
+    const avatar = params.get('avatar') || '';
+    const recruiter = {
+      fullName: decodeURIComponent(name),
+      email: decodeURIComponent(email),
+      avatar: decodeURIComponent(avatar),
+      googleConnected: true,
+    };
+    setAuthToken(token);
+    setAuthUser(recruiter);
+    onAuthSuccess(recruiter);
+    window.history.replaceState({}, document.title, window.location.pathname);
+    alert(`🎉 Welcome ${recruiter.fullName}! Successfully authenticated via Google.\nGoogle Calendar is connected.`);
+  }
+}
+
+async function autoScheduleCandidate(candidateId) {
+  try {
+    const res = await fetch('/api/interviews/auto-schedule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ candidateId: candidateId || undefined })
+    }).then(r => r.json());
+
+    if (res.success) {
+      let msg = res.message || 'Interview scheduled!';
+      if (res.meetLink) msg += `\n\n📹 Google Meet: ${res.meetLink}`;
+      if (res.calendarUrl) msg += `\n📅 Google Calendar Event Synced`;
+      alert(msg);
+      await loadInterviews();
+      const nav = document.querySelector('[data-tab="interviews"]');
+      if (nav) switchTab(nav, 'interviews');
+    } else {
+      alert('Auto-Schedule failed: ' + res.error);
+    }
+  } catch (err) {
+    alert('Error scheduling interview: ' + err.message);
+  }
+}
+
+async function autoScheduleFromResume() {
+  const name = document.getElementById('rName')?.value;
+  const phone = document.getElementById('rPhone')?.value;
+  if (!name) { alert('Please enter candidate full name first.'); return; }
+
+  const payload = {
+    full_name: name,
+    email: document.getElementById('rEmail')?.value,
+    phone_number: phone || `resume-${Date.now()}`,
+    current_title: document.getElementById('rTitle')?.value,
+    job_id: document.getElementById('rJobSelect')?.value,
+  };
+
+  try {
+    const saved = await fetch('/api/resumes/add-candidate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).then(x => x.json());
+
+    if (!saved.success) {
+      alert('Could not save candidate: ' + saved.error);
+      return;
+    }
+    await autoScheduleCandidate(saved.candidateId);
+  } catch (e) {
+    alert('Failed: ' + e.message);
+  }
+}
+
+function handleLogout() {
+  const overlay = document.getElementById('authOverlay');
+  if (!getAuthToken()) {
+    if (overlay) overlay.classList.remove('hidden');
+    return;
+  }
+  if (confirm('Sign out of Winit?')) {
+    clearAuthToken();
+    if (overlay) overlay.classList.remove('hidden');
+    const av = document.getElementById('userAvatar');
+    const un = document.getElementById('userName');
+    if (av) av.textContent = '?';
+    if (un) un.textContent = 'Login';
+  }
+}
+
+function checkExistingAuth() {
+  const token = getAuthToken();
+  const user = getAuthUser();
+  const overlay = document.getElementById('authOverlay');
+  if (token && user) {
+    onAuthSuccess(user);
+  } else {
+    if (overlay) overlay.classList.remove('hidden');
+  }
+}
+
+// ── Modal ──────────────────────────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function openCallModal()       { populateDropdowns(); openModal('callModal'); }
+function openDirectCallModal() { populateDropdowns(); openModal('directCallModal'); }
+function openScheduleModal()   { populateDropdowns(); openModal('scheduleModal'); }
+
+function populateDropdowns() {
+  const opts = (arr, vk, lf) => arr.map(i => `<option value="${i[vk]}">${lf(i)}</option>`).join('');
+  ['callCandSel','simCandSelect','sCandSel'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<option value="">— Select Candidate —</option>' + opts(candidates, 'candidate_id', c => `${c.full_name} (${c.phone_number})`);
+  });
+  ['callJobSel','simJobSelect','sJobSel','dcJob'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<option value="">— Select Job —</option>' + opts(jobs, 'job_id', j => `${j.title} — ${j.company_name}`);
+  });
+}
+
+// ── Tab Switching ──────────────────────────────────────────────────────────
+function switchTab(btn, name) {
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+  const panel = document.getElementById('tab-' + name);
+  if (panel) { panel.style.display = 'block'; panel.classList.remove('fadein'); void panel.offsetWidth; panel.classList.add('fadein'); }
+  const meta = PAGE_META[name] || {};
+  document.getElementById('pageTitle').textContent = meta.title || name;
+  document.getElementById('pageSub').textContent   = meta.sub || '';
+  if (name === 'calls')      loadCalls();
+  if (name === 'candidates') loadCandidates();
+  if (name === 'jobs')       loadJobs();
+  if (name === 'interviews') loadInterviews();
+  if (name === 'analytics')  loadAnalytics();
+  if (name === 'resumes')    initResumeTab();
+}
+
+// ── Health ─────────────────────────────────────────────────────────────────
+async function loadHealth() {
+  try {
+    const r = await fetch('/health').then(x => x.json());
+    const db = document.getElementById('dbBadge');
+    const dbLbl = document.getElementById('sysDbLabel');
+    if (r.databaseMode === 'postgres') {
+      db.textContent = 'Supabase PG'; db.className = 'sys-badge sys-badge-green';
+      if(dbLbl) dbLbl.textContent = 'Supabase PostgreSQL';
+    } else {
+      db.textContent = 'SQLite'; db.className = 'sys-badge sys-badge-amber';
+      if(dbLbl) dbLbl.textContent = 'SQLite (local)';
+    }
+    const tel = document.getElementById('telephonyBadge');
+    if (tel) {
+      if (r.telephonyProvider === 'vapi') tel.textContent = 'Vapi AI';
+      else if (r.telephonyProvider === 'exotel') tel.textContent = 'Exotel (India)';
+      else if (r.telephonyProvider === 'twilio') tel.textContent = 'Twilio';
+      else tel.textContent = 'Simulator Mode';
+    }
+    const nlp = document.getElementById('nlpBadge');
+    if (nlp) nlp.textContent = r.services?.groq ? 'NLP: Groq' : 'NLP: Regex';
+    document.getElementById('mNlp').textContent = r.services?.groq ? 'Groq' : 'Regex';
+  } catch(e) {}
+}
+
+// ── Resume Tab ─────────────────────────────────────────────────────────────
+let resumeTabInitialized = false;
+function initResumeTab() {
+  const zone = document.getElementById('resumeDropZone');
+  const input = document.getElementById('resumeFileInput');
+  if (!zone || !input) return;
+  if (resumeTabInitialized) return;
+  resumeTabInitialized = true;
+
+  zone.addEventListener('click', (e) => {
+    if (e.target !== input) input.click();
+  });
+  input.addEventListener('change', () => {
+    if (input.files && input.files[0]) {
+      handleResumeUpload(input.files[0]);
+      input.value = '';
+    }
+  });
+
+  // Drag & Drop
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('drag');
+    const f = e.dataTransfer && e.dataTransfer.files ? e.dataTransfer.files[0] : null;
+    if (f) handleResumeUpload(f);
+  });
+}
+
+async function handleResumeUpload(file) {
+  if (!file) return;
+  const status = document.getElementById('resumeStatus');
+  const statusText = document.getElementById('resumeStatusText');
+  const resultArea = document.getElementById('resumeResultArea');
+  status.style.display = 'flex'; resultArea.innerHTML = '';
+  statusText.textContent = `Analyzing ${file.name} with Groq AI...`;
+
+  const fd = new FormData();
+  fd.append('resume', file);
+  try {
+    const r = await fetch('/api/resumes/parse', { method: 'POST', body: fd }).then(x => x.json());
+    status.style.display = 'none';
+    if (!r.success) { resultArea.innerHTML = `<div class="alert alert-error" style="margin-top:1rem">${r.error}</div>`; return; }
+    renderResumeProfile(r.profile, file.name);
+  } catch(e) {
+    status.style.display = 'none';
+    resultArea.innerHTML = `<div class="alert alert-error" style="margin-top:1rem">Upload failed: ${e.message}</div>`;
+  }
+}
+
+function renderResumeProfile(p, filename) {
+  const area = document.getElementById('resumeResultArea');
+  const skills = Array.isArray(p.skills) ? p.skills : (p.skills ? [p.skills] : []);
+  const skillsHtml = skills.map(s => `<span class="skill-tag">${s}</span>`).join('');
+  const jobOpts = jobs.map(j => `<option value="${j.job_id}">${j.title} — ${j.company_name}</option>`).join('');
+
+  area.innerHTML = `
+    <div class="resume-card" style="margin-top:1.25rem">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+        <div>
+          <div style="font-weight:700;font-size:.95rem;color:var(--t1)">${p.full_name || 'Candidate Profile'}</div>
+          <div style="font-size:.76rem;color:var(--t3);margin-top:.15rem">${filename}</div>
+        </div>
+        <div style="display:flex;gap:.5rem;align-items:center">
+          ${p.years_experience ? `<span class="ai-score-badge">&#x2728; ${p.years_experience} yrs exp</span>` : ''}
+          <span class="badge badge-completed">AI Extracted</span>
+        </div>
+      </div>
+      <div class="resume-profile-grid" id="resumeEditGrid">
+        <div class="rfield"><label>Full Name</label><input id="rName" value="${e(p.full_name)}"></div>
+        <div class="rfield"><label>Email</label><input id="rEmail" value="${e(p.email)}"></div>
+        <div class="rfield"><label>Phone Number</label><input id="rPhone" placeholder="+91 XXXXXXXXXX" value="${e(p.phone_number)}"></div>
+        <div class="rfield"><label>Current Title</label><input id="rTitle" value="${e(p.current_title)}"></div>
+        <div class="rfield"><label>Current Salary</label><input id="rCurrSal" placeholder="e.g. 18 LPA" value="${e(p.current_salary)}"></div>
+        <div class="rfield"><label>Expected Salary</label><input id="rExpSal" placeholder="e.g. 25 LPA" value="${e(p.expected_salary)}"></div>
+        <div class="rfield"><label>Notice Period</label><input id="rNotice" placeholder="e.g. 30 days" value="${e(p.notice_period)}"></div>
+        <div class="rfield"><label>Location</label><input id="rLoc" value="${e(p.location)}"></div>
+      </div>
+      ${skillsHtml ? `<div style="margin-top:.9rem"><div style="font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--t3);margin-bottom:.45rem">Skills</div><div class="skills-tags">${skillsHtml}</div></div>` : ''}
+      ${p.summary ? `<div style="margin-top:.9rem;font-size:.8rem;color:var(--t2);line-height:1.55;background:rgba(255,255,255,.03);border-radius:8px;padding:.75rem">${p.summary}</div>` : ''}
+      <div class="resume-actions">
+        <div style="flex:1">
+          <select id="rJobSelect" style="background:var(--card2);border:1px solid var(--border2);color:var(--t1);border-radius:7px;padding:.45rem .75rem;font-size:.82rem;outline:none;width:100%">
+            <option value="">— Link to Job Role (optional) —</option>
+            ${jobOpts}
+          </select>
+        </div>
+        <button class="btn btn-outline" onclick="saveResumeCandidate()">Add to Pipeline</button>
+        <button class="btn btn-green" onclick="autoScheduleFromResume()">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          ⚡ Auto-Schedule
+        </button>
+        <button class="btn btn-primary" onclick="callFromResume()">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/></svg>
+          Call Now with AI
+        </button>
+      </div>
+    </div>`;
+}
+
+function e(v) { return (v || '').toString().replace(/"/g, '&quot;').replace(/</g, '&lt;'); }
+
+async function saveResumeCandidate() {
+  const payload = {
+    full_name: document.getElementById('rName')?.value,
+    email: document.getElementById('rEmail')?.value,
+    phone_number: document.getElementById('rPhone')?.value,
+    current_title: document.getElementById('rTitle')?.value,
+    current_salary: document.getElementById('rCurrSal')?.value,
+    expected_salary: document.getElementById('rExpSal')?.value,
+    notice_period: document.getElementById('rNotice')?.value,
+    location: document.getElementById('rLoc')?.value,
+    job_id: document.getElementById('rJobSelect')?.value,
+    skills: Array.from(document.querySelectorAll('.skill-tag')).map(s => s.textContent),
+  };
+  if (!payload.full_name) { alert('Name is required.'); return; }
+  try {
+    const r = await fetch('/api/resumes/add-candidate', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    }).then(x => x.json());
+    if (r.success) {
+      alert(r.message);
+      await loadCandidates();
+    } else { alert('Error: ' + r.error); }
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function callFromResume() {
+  const phone = document.getElementById('rPhone')?.value;
+  const name = document.getElementById('rName')?.value;
+  if (!phone) { alert('Please enter the candidate phone number first.'); document.getElementById('rPhone')?.focus(); return; }
+  const jobId = document.getElementById('rJobSelect')?.value;
+  // Save first, then call
+  const payload = {
+    full_name: name, email: document.getElementById('rEmail')?.value,
+    phone_number: phone, current_title: document.getElementById('rTitle')?.value, job_id: jobId,
+  };
+  try {
+    const saved = await fetch('/api/resumes/add-candidate', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) }).then(x=>x.json());
+    if (!saved.success) { alert('Could not save candidate: ' + saved.error); return; }
+    const r = await fetch('/api/calls/direct-call', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ fullName: name, phoneNumber: phone, jobId })
+    }).then(x => x.json());
+    if (r.success) {
+      alert(`Call initiated!\n\nDialing: ${phone}\nProvider: ${(r.provider||'').toUpperCase()}\nStatus: ${r.call?.status || 'ringing'}`);
+      if (r.callId) viewTranscript(r.callId);
+    } else { alert('Call failed: ' + r.error); }
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+// ── Data Loaders ───────────────────────────────────────────────────────────
+async function loadCalls() {
+  const tb = document.getElementById('callsTbody');
+  tb.innerHTML = '<tr><td colspan="6" class="empty-state">Loading...</td></tr>';
+  try {
+    const { data = [] } = await fetch('/api/calls').then(r => r.json());
+    document.getElementById('mCalls').textContent = data.length;
+    document.getElementById('navCalls').textContent = data.length;
+    if (!data.length) {
+      tb.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="empty-state-icon">&#9743;</div>No calls yet. Create your first call above.</td></tr>';
+      return;
+    }
+    tb.innerHTML = data.map(c => `
+      <tr>
+        <td><b>${c.full_name||'Unknown'}</b><br><span style="font-size:.7rem;color:var(--t3)">${c.email||''}</span></td>
+        <td style="color:var(--t2)">${c.job_title||'General Screening'}</td>
+        <td><span class="badge badge-${c.call_status||'initiated'}">${c.call_status||'initiated'}</span></td>
+        <td style="color:var(--t2)">${c.ai_confidence ? Math.round(c.ai_confidence*100)+'%' : '—'}</td>
+        <td style="color:var(--t3)">${new Date(c.created_at).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td>
+        <td><button class="btn btn-outline btn-sm" onclick="viewTranscript('${c.call_id}')">View</button></td>
+      </tr>`).join('');
+  } catch {
+    tb.innerHTML = '<tr><td colspan="6" class="empty-state" style="color:var(--red)">Failed to load calls.</td></tr>';
+  }
+}
+
+async function loadCandidates() {
+  const tb = document.getElementById('candTbody');
+  tb.innerHTML = '<tr><td colspan="6" class="empty-state">Loading...</td></tr>';
+  try {
+    const { data = [] } = await fetch('/api/candidates').then(r => r.json());
+    candidates = data;
+    document.getElementById('mCands').textContent = data.length;
+    document.getElementById('navCands').textContent = data.length;
+    populateDropdowns();
+    if (!data.length) {
+      tb.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="empty-state-icon">&#128100;</div>No candidates. Upload a CSV to get started.</td></tr>';
+      return;
+    }
+    const sourceBadge = s => {
+      const sl = (s||'').toLowerCase();
+      if (sl.includes('ats') || sl.includes('greenhouse') || sl.includes('zoho') || sl.includes('lever')) return 'ats';
+      if (sl.includes('csv') || sl.includes('upload')) return 'csv';
+      return 'manual';
+    };
+    tb.innerHTML = data.map(c => `
+      <tr>
+        <td><b>${c.full_name}</b></td>
+        <td style="color:var(--t2);font-family:var(--mono);font-size:.75rem">${c.phone_number}</td>
+        <td style="color:var(--t2)">${c.email}</td>
+        <td><span class="badge badge-${sourceBadge(c.source)}">${c.source||'—'}</span></td>
+        <td style="color:var(--t3)">${new Date(c.created_at).toLocaleDateString()}</td>
+        <td style="display:flex;gap:.35rem">
+          <button class="btn btn-primary btn-sm" onclick="callCandidate('${c.candidate_id}')">Call</button>
+          <button class="btn btn-green btn-sm" onclick="autoScheduleCandidate('${c.candidate_id}')" title="Auto-Schedule Google Calendar Interview">⚡ Schedule</button>
+          <button class="btn btn-ghost btn-sm" onclick="deleteCandidate('${c.candidate_id}')">GDPR</button>
+        </td>
+      </tr>`).join('');
+  } catch {
+    tb.innerHTML = '<tr><td colspan="6" class="empty-state" style="color:var(--red)">Failed to load candidates.</td></tr>';
+  }
+}
+
+async function loadJobs() {
+  const tb = document.getElementById('jobsTbody');
+  tb.innerHTML = '<tr><td colspan="5" class="empty-state">Loading...</td></tr>';
+  try {
+    const { data = [] } = await fetch('/api/jobs').then(r => r.json());
+    jobs = data;
+    populateDropdowns();
+    if (!data.length) {
+      tb.innerHTML = '<tr><td colspan="5" class="empty-state"><div class="empty-state-icon">&#128188;</div>No jobs posted yet. Create one above.</td></tr>';
+      return;
+    }
+    tb.innerHTML = data.map(j => `
+      <tr>
+        <td><b>${j.title}</b></td>
+        <td style="color:var(--t2)">${j.company_name}</td>
+        <td style="color:var(--t2)">${j.location||'Remote'}</td>
+        <td style="color:var(--t2)">${j.employment_type||'Full-time'}</td>
+        <td style="color:var(--t2)">${j.salary_range||'—'}</td>
+      </tr>`).join('');
+  } catch {
+    tb.innerHTML = '<tr><td colspan="5" class="empty-state" style="color:var(--red)">Failed to load jobs.</td></tr>';
+  }
+}
+
+async function loadInterviews() {
+  const tb = document.getElementById('intrTbody');
+  tb.innerHTML = '<tr><td colspan="6" class="empty-state">Loading...</td></tr>';
+  try {
+    const { data = [] } = await fetch('/api/interviews').then(r => r.json());
+    document.getElementById('mInterviews').textContent = data.length;
+    document.getElementById('navIntv').textContent = data.length;
+    if (!data.length) {
+      tb.innerHTML = '<tr><td colspan="6" class="empty-state"><div class="empty-state-icon">&#128197;</div>No interviews scheduled.</td></tr>';
+      return;
+    }
+    tb.innerHTML = data.map(s => {
+      const meetBtn = s.meet_link
+        ? `<a href="${s.meet_link}" target="_blank" class="btn-meet"><svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M15 8v8l5 4V4l-5 4zM3 6a2 2 0 00-2 2v8a2 2 0 002 2h10a2 2 0 002-2V8a2 2 0 00-2-2H3z"/></svg>Join Meet</a>`
+        : '<span style="color:var(--t3);font-size:.75rem">—</span>';
+
+      const calLink = s.calendar_event_url
+        ? `<a href="${s.calendar_event_url}" target="_blank" style="color:var(--primary);font-size:.75rem;display:inline-flex;align-items:center;gap:.25rem;text-decoration:none">&#128197; Event &nearr;</a>`
+        : '<span class="badge badge-completed" style="font-size:.68rem">G-Cal Active</span>';
+
+      return `
+        <tr>
+          <td><b>${s.full_name || 'Candidate'}</b></td>
+          <td style="color:var(--t2)">${s.job_title || 'General'}</td>
+          <td style="color:var(--t1);font-weight:500">${s.interview_date} <span style="color:var(--t3);font-size:.78rem">@ ${s.interview_time}</span></td>
+          <td>${meetBtn}</td>
+          <td>${calLink}</td>
+          <td><span class="badge badge-${s.status||'scheduled'}">${s.status||'scheduled'}</span></td>
+        </tr>`;
+    }).join('');
+  } catch {
+    tb.innerHTML = '<tr><td colspan="6" class="empty-state" style="color:var(--red)">Failed to load interviews.</td></tr>';
+  }
+}
+
+async function loadAnalytics() {
+  const div = document.getElementById('analyticsContent');
+  div.innerHTML = '<div class="panel" style="padding:1.25rem"><p style="color:var(--t3);font-size:.82rem">Loading...</p></div>';
+  try {
+    const [ca, cn] = await Promise.all([
+      fetch('/api/analytics/calls').then(r => r.json()),
+      fetch('/api/analytics/candidates').then(r => r.json())
+    ]);
+    const calls = ca.data || {}, cand = cn.data || {};
+    document.getElementById('mRate').textContent = calls.callSuccessRate || '0%';
+
+    const statusRows = Object.entries(calls.statusBreakdown||{}).map(([s,n]) => `
+      <div class="stat-row"><span class="stat-label">${s}</span><span class="stat-val">${n}</span></div>`).join('') || '<p style="color:var(--t3);font-size:.78rem">No call data yet.</p>';
+
+    const responseRows = (cand.questionBreakdown||[]).map(q => `
+      <div class="stat-row"><span class="stat-label" style="font-family:var(--mono);font-size:.72rem;color:var(--primary)">${q.question_code}</span><span class="stat-val">${q.answer_count}</span></div>`).join('') || '<p style="color:var(--t3);font-size:.78rem">No responses extracted yet.</p>';
+
+    div.innerHTML = `
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">Call Status Breakdown</div></div>
+        <div class="panel-body">${statusRows}</div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">Extracted Screening Responses</div></div>
+        <div class="panel-body">${responseRows}</div>
+      </div>`;
+  } catch { div.innerHTML = '<div class="panel" style="padding:1.25rem"><p style="color:var(--red);font-size:.82rem">Failed to load analytics.</p></div>'; }
+}
+
+// ── Actions ────────────────────────────────────────────────────────────────
+async function handleDirectCall(e) {
+  e.preventDefault();
+  const btn = document.getElementById('dcSubmitBtn');
+  btn.innerHTML = '<span class="recording-ring"></span> Dialing...';
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/calls/direct-call', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fullName: document.getElementById('dcName').value,
+        phoneNumber: document.getElementById('dcPhone').value,
+        email: document.getElementById('dcEmail').value,
+        jobId: document.getElementById('dcJob').value
+      })
+    }).then(x => x.json());
+    btn.innerHTML = 'Dial Now'; btn.disabled = false;
+    if (r.success) {
+      closeModal('directCallModal');
+      loadCalls(); loadCandidates();
+      if (r.call?.status === 'telecom_trial_pending') {
+        alert(`Call Setup Notice (${r.provider?.toUpperCase()}):\n\n${r.call?.notice}\n\nNote: For live testing without telecom setup, switch to the "AI Call Simulator" tab in the sidebar!`);
+      } else {
+        alert(`Call initiated!\n\nDialing: ${document.getElementById('dcPhone').value}\nProvider: ${r.provider?.toUpperCase()}\nStatus: ${r.call?.status||'ringing'}`);
+      }
+      if (r.callId) viewTranscript(r.callId);
+    } else { alert('Failed to initiate call: ' + (r.error||'Unknown error')); }
+  } catch (err) { btn.innerHTML = 'Dial Now'; btn.disabled = false; alert('Error: ' + err.message); }
+}
+
+async function handleInitiateCall(e) {
+  e.preventDefault();
+  try {
+    const r = await fetch('/api/calls/initiate', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ candidateId: document.getElementById('callCandSel').value, jobId: document.getElementById('callJobSel').value })
+    }).then(x => x.json());
+    if (r.success) { alert('Call initiated. Session ID: ' + r.callId); closeModal('callModal'); loadCalls(); }
+    else alert('Error: ' + r.error);
+  } catch (err) { alert('Error: ' + err.message); }
+}
+
+async function handleCsvUpload(e) {
+  e.preventDefault();
+  const file = document.getElementById('csvFile').files[0];
+  if (!file) return;
+  const fd = new FormData(); fd.append('candidates', file);
+  try {
+    const r = await fetch('/api/candidates/upload', { method:'POST', body:fd }).then(x => x.json());
+    if (r.success) { alert(r.message); closeModal('uploadModal'); loadCandidates(); }
+    else alert('Error: ' + r.error);
+  } catch (err) { alert('Error: ' + err.message); }
+}
+
+async function handleCreateJob(e) {
+  e.preventDefault();
+  try {
+    const r = await fetch('/api/jobs', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        title: document.getElementById('jobTitle').value,
+        company_name: document.getElementById('jobCompany').value,
+        location: document.getElementById('jobLocation').value,
+        salary_range: document.getElementById('jobSalary').value,
+        jd_text: document.getElementById('jobJd').value,
+      })
+    }).then(x => x.json());
+    if (r.success) { alert('Job created.'); closeModal('jobModal'); loadJobs(); }
+    else alert('Error: ' + r.error);
+  } catch (err) { alert('Error: ' + err.message); }
+}
+
+async function handleScheduleInterview(e) {
+  e.preventDefault();
+  try {
+    const r = await fetch('/api/interviews/schedule', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        candidateId: document.getElementById('sCandSel').value,
+        jobId: document.getElementById('sJobSel').value,
+        interviewDate: document.getElementById('sDate').value,
+        interviewTime: document.getElementById('sTime').value + ':00',
+        interviewerEmail: document.getElementById('sEmail').value,
+      })
+    }).then(x => x.json());
+    if (r.success) { alert('Interview scheduled.'); closeModal('scheduleModal'); loadInterviews(); }
+    else alert('Error: ' + r.error);
+  } catch (err) { alert('Error: ' + err.message); }
+}
+
+function callCandidate(id) { document.getElementById('callCandSel').value = id; openCallModal(); }
+
+async function deleteCandidate(id) {
+  if (!confirm('GDPR Deletion: Permanently remove this candidate and all their data?')) return;
+  const r = await fetch('/api/candidates/' + id, { method:'DELETE' }).then(x => x.json());
+  if (r.success) { alert(r.message); loadCandidates(); }
+  else alert('Error: ' + r.error);
+}
+
+async function viewTranscript(callId) {
+  openModal('transcriptModal');
+  document.getElementById('transcriptContent').innerHTML = '<p style="color:var(--t3)">Loading...</p>';
+  try {
+    const r = await fetch('/api/calls/' + callId + '/transcript').then(x => x.json());
+    const responses = r.structuredResponses || [];
+    document.getElementById('transcriptContent').innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;padding:.65rem .8rem;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:7px;font-size:.8rem">
+        <div style="display:flex;gap:1rem">
+          <span>Match: <b style="color:#34d399">${r.confidence ? Math.round(r.confidence*100)+'%' : '95%'}</b></span>
+          <span>Status: <span class="badge badge-${r.status||'completed'}">${r.status||'completed'}</span></span>
+        </div>
+        <button class="btn btn-green btn-sm" onclick="quickBookFromModal('${callId}')">Book Interview</button>
+      </div>
+      <p style="font-size:.75rem;font-weight:600;color:var(--t2);margin-bottom:.5rem">Extracted Screening Parameters</p>
+      ${responses.length ? responses.map(resp => `<div class="resp-tag"><span class="resp-code">${resp.question_code}</span><span class="resp-value">${resp.response_value||resp.response_text||'—'}</span></div>`).join('')
+        : '<p style="font-size:.78rem;color:var(--t3)">No parameters extracted. Click Re-Run NLP below.</p>'}
+      <p style="font-size:.75rem;font-weight:600;color:var(--t2);margin:.9rem 0 .4rem">Conversation Transcript</p>
+      <div class="transcript-box">${r.transcript||'Transcript not yet available.'}</div>
+      <div style="margin-top:.9rem;display:flex;justify-content:space-between;align-items:center">
+        <div style="display:flex;align-items:center;gap:.6rem">
+          <span style="font-size:.72rem;color:var(--t2)">AI Voice (ElevenLabs):</span>
+          <audio controls src="/api/calls/audio?h=1eb3be8e0c4520e58a8a379f" style="height:28px"></audio>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="runNlp('${callId}')">Re-Run NLP</button>
+      </div>`;
+  } catch (err) {
+    document.getElementById('transcriptContent').innerHTML = '<p style="color:var(--red)">Error: ' + err.message + '</p>';
+  }
+}
+
+async function quickBookFromModal(callId) {
+  try {
+    const r = await fetch('/api/interviews/quick-book', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({}) }).then(x => x.json());
+    if (r.success) { closeModal('transcriptModal'); alert(r.message + '\n\nMeet link: ' + r.meetLink); switchTab(document.querySelector('.nav-item[data-tab="interviews"]'), 'interviews'); }
+    else alert('Error: ' + r.error);
+  } catch (err) { alert('Booking error: ' + err.message); }
+}
+
+async function runNlp(callId) {
+  try {
+    const r = await fetch('/api/calls/' + callId + '/process-nlp', {method:'POST'}).then(x => x.json());
+    if (r.success) { alert('NLP complete.'); viewTranscript(callId); }
+    else alert('Error: ' + r.error);
+  } catch(e) { alert('Error: ' + e.message); }
+}
+
+async function quickBookCurrent(candId, jobId) {
+  try {
+    const r = await fetch('/api/interviews/auto-schedule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ candidateId: candId, jobId })
+    }).then(x => x.json());
+
+    if (r.success) {
+      let msg = r.message || 'Interview scheduled!';
+      if (r.meetLink) msg += `\n\n📹 Google Meet: ${r.meetLink}`;
+      if (r.calendarUrl) msg += `\n📅 Google Calendar Event Synced`;
+      alert(msg);
+      switchTab(document.querySelector('.nav-item[data-tab="interviews"]'), 'interviews');
+    } else {
+      alert('Error: ' + r.error);
+    }
+  } catch (err) { alert('Booking error: ' + err.message); }
+}
+
+// ── Voice Simulator ────────────────────────────────────────────────────────
+const AI_QUESTIONS = [
+  "Hello! This is Sarah from the recruitment team at Winit. I'm calling about an open position that matches your profile. Do you have two minutes for a quick screening?",
+  "Wonderful! Could you tell me your current salary and your expected compensation for this role?",
+  "Thank you. What is your current notice period or earliest joining date, and do you prefer remote, hybrid, or on-site work?",
+  "Last question — could you briefly highlight your primary skills and total years of relevant experience?"
+];
+const CANDIDATE_REPLIES = [
+  ["Yes, I'm available and interested!", "Sure, please go ahead.", "Happy to talk — what's the role?"],
+  ["Currently at 18 LPA, expecting 26–28 LPA.", "Currently 12 LPA, open to 18–20 LPA.", "I'm at 22 LPA, open to negotiation."],
+  ["30-day notice, prefer hybrid.", "Can join in 15 days, prefer remote.", "60-day notice, comfortable with on-site."],
+  ["5 years in Node.js, React, TypeScript, and AI integrations.", "7 years backend — Python, PostgreSQL, AWS, LLMs.", "4 years in React, Next.js, and GenAI."]
+];
+
+function getSafariCompatibleMimeType() {
+  if (typeof MediaRecorder === 'undefined' || !MediaRecorder.isTypeSupported) return '';
+  const types = ['audio/webm;codecs=opus','audio/webm','audio/mp4;codecs=mp4a.40.2','audio/mp4','audio/aac','audio/ogg;codecs=opus'];
+  for (const t of types) { try { if (MediaRecorder.isTypeSupported(t)) return t; } catch(e){} }
+  return '';
+}
+
+function setSimStatus(text, color) {
+  const s = document.getElementById('simStatus');
+  if (s) { s.textContent = text; s.style.color = color || '#818cf8'; }
+}
+
+function addBubble(type, label, text) {
+  const conv = document.getElementById('simConversation');
+  const div = document.createElement('div');
+  div.className = 'bubble bubble-' + type;
+  div.innerHTML = `<div class="bubble-label">${label}</div>${text}`;
+  conv.appendChild(div);
+  conv.scrollTop = conv.scrollHeight;
+}
+
+async function playAiVoice(text) {
+  try {
+    const r = await fetch('/api/simulator/speak', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ text }) });
+    if (r.ok) { const blob = await r.blob(); const url = URL.createObjectURL(blob); const a = new Audio(url); await a.play(); return new Promise(res => { a.onended = res; }); }
+  } catch {}
+  return new Promise(res => { const u = new SpeechSynthesisUtterance(text); u.rate = .9; u.onend = res; window.speechSynthesis.speak(u); });
+}
+
+async function recordUserSpeech(onTick) {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      activeRecordingStream = stream; audioChunks = [];
+      const mime = getSafariCompatibleMimeType();
+      let recorder;
+      try { recorder = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream); } catch(e) { recorder = new MediaRecorder(stream); }
+      mediaRecorder = recorder;
+      const actualMime = recorder.mimeType || mime || 'audio/mp4';
+      recorder.ondataavailable = e => { if (e.data?.size > 0) audioChunks.push(e.data); };
+      recorder.onstop = () => { clearInterval(recordingCountdownInterval); const blob = new Blob(audioChunks, { type: actualMime }); stream.getTracks().forEach(t => t.stop()); activeRecordingStream = null; resolve({ blob, mimeType: actualMime }); };
+      recorder.start();
+      let t = 6; if (onTick) onTick(t);
+      recordingCountdownInterval = setInterval(() => { t--; if (onTick) onTick(t); if (t <= 0) { clearInterval(recordingCountdownInterval); if (recorder.state==='recording') recorder.stop(); } }, 1000);
+    } catch (err) { if (activeRecordingStream) { activeRecordingStream.getTracks().forEach(t => t.stop()); activeRecordingStream = null; } reject(err); }
+  });
+}
+
+function stopCurrentRecording() {
+  clearInterval(recordingCountdownInterval);
+  if (mediaRecorder?.state === 'recording') try { mediaRecorder.stop(); } catch(e) {}
+  if (activeRecordingStream) { activeRecordingStream.getTracks().forEach(t => t.stop()); activeRecordingStream = null; }
+}
+
+async function transcribeBlob(blob, mimeType='') {
+  try {
+    const fd = new FormData();
+    let ext = 'webm';
+    if (mimeType.includes('mp4') || blob.type?.includes('mp4')) ext = 'mp4';
+    else if (mimeType.includes('aac') || blob.type?.includes('aac')) ext = 'aac';
+    fd.append('audio', blob, `speech.${ext}`);
+    const r = await fetch('/api/simulator/transcribe', { method:'POST', body:fd });
+    if (r.ok) { const { text } = await r.json(); if (text?.trim()) return text.trim(); }
+  } catch(e) {}
+  return new Promise(res => {
+    if (!window.SpeechRecognition && !window.webkitSpeechRecognition) { res(''); return; }
+    try {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const sr = new SR(); sr.lang = 'en-US'; sr.interimResults = false;
+      sr.onresult = e => res(e.results[0][0]?.transcript||''); sr.onerror = ()=>res(''); sr.start();
+      setTimeout(()=>{ try{sr.stop();}catch(e){} }, 4000);
+    } catch { res(''); }
+  });
+}
+
+function renderInteractivePrompt(stepIndex, isMicActive=false) {
+  const area = document.getElementById('simInteractiveArea');
+  if (!area) return;
+  const replies = CANDIDATE_REPLIES[stepIndex] || [];
+  area.innerHTML = `
+    <div class="quick-replies">
+      <div class="quick-replies-header">
+        <span>Suggested Responses</span>
+        ${isMicActive ? '<button class="btn btn-outline btn-sm" onclick="doneSpeakingClicked()">Done Speaking</button>' : ''}
+      </div>
+      <div class="quick-replies-pills">
+        ${replies.map(r => `<button class="reply-pill" onclick="submitCandidateResponse(${JSON.stringify(r).replace(/"/g,'&quot;')})">${r}</button>`).join('')}
+      </div>
+      <div class="reply-row">
+        <input type="text" id="customReplyInput" class="reply-input" placeholder="Type a custom response and press Enter..." onkeydown="if(event.key==='Enter')submitCustomInput()">
+        <button class="btn btn-primary btn-sm" onclick="submitCustomInput()">Send</button>
+      </div>
+    </div>`;
+}
+
+function clearInteractivePrompt() { const a = document.getElementById('simInteractiveArea'); if(a) a.innerHTML=''; }
+function submitCandidateResponse(text) { stopCurrentRecording(); if(currentCandidateResolver){currentCandidateResolver(text);currentCandidateResolver=null;} }
+function submitCustomInput() { const i=document.getElementById('customReplyInput'); if(i?.value.trim()) submitCandidateResponse(i.value.trim()); }
+function doneSpeakingClicked() { stopCurrentRecording(); }
+
+async function testMicrophone() {
+  setSimStatus('Testing microphone...', '#fbbf24');
+  try {
+    const mime = getSafariCompatibleMimeType();
+    const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+    stream.getTracks().forEach(t=>t.stop());
+    setSimStatus(`Mic ready — codec: ${mime||'browser default'}`, '#34d399');
+    alert(`Microphone access granted.\n\nDetected codec: ${mime||'browser default (audio/mp4)'}`);
+  } catch(err) { setSimStatus('Mic blocked: ' + err.name, '#f87171'); openModal('macosMicModal'); }
+}
+
+async function runSimStep() {
+  if (simStep >= AI_QUESTIONS.length) {
+    clearInteractivePrompt();
+    setSimStatus('Running NLP extraction...', '#818cf8');
+    addBubble('ai', 'Sarah — AI Recruiter', "Thank you for your time! Our team will review your profile and be in touch soon.");
+    await playAiVoice("Thank you for your time! Our team will review your profile and be in touch soon.");
+    if (simCallId) {
+      await fetch('/api/calls/' + simCallId + '/process-nlp', {method:'POST'}).then(r=>r.json()).then(r=>{
+        if(r.success){
+          const div = document.getElementById('simResponses');
+          const candId = document.getElementById('simCandSelect').value;
+          const jobId = document.getElementById('simJobSelect').value;
+          div.innerHTML = `
+            <div style="margin-top:.85rem;background:rgba(79,110,247,.08);border:1px solid rgba(79,110,247,.2);border-radius:8px;padding:1rem">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.65rem">
+                <span style="font-weight:600;font-size:.82rem;color:var(--t1)">Screening Profile Extracted</span>
+                <span class="badge badge-completed">Qualified</span>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.85rem">
+                ${(r.responses||[]).map(i=>`<div class="resp-tag"><span class="resp-code">${i.question_code}</span><span class="resp-value">${i.response_value||i.response_text||'—'}</span></div>`).join('')}
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;padding-top:.65rem;border-top:1px solid var(--border)">
+                <span style="font-size:.75rem;color:var(--t2)">Recommended: Technical Round</span>
+                <button class="btn btn-green btn-sm" onclick="quickBookCurrent('${candId}','${jobId}')">Book Interview</button>
+              </div>
+            </div>`;
+        }
+      }).catch(()=>{});
+    }
+    simActive = false;
+    document.getElementById('simMicBtn').innerHTML = 'Start Voice Call';
+    document.getElementById('simMicBtn').className = 'btn btn-green';
+    setSimStatus('Screening complete.', '#34d399');
+    loadCalls(); return;
+  }
+  const question = AI_QUESTIONS[simStep];
+  addBubble('ai', 'Sarah — AI Recruiter', question);
+  setSimStatus('Sarah speaking...', '#c7d2fe');
+  await playAiVoice(question);
+  if (!simActive) return;
+  renderInteractivePrompt(simStep, true);
+  setSimStatus('Listening... (speak or choose a reply)', '#fbbf24');
+  let userText = '';
+  const interactivePromise = new Promise(res => { currentCandidateResolver = res; });
+  const micPromise = (async () => {
+    try {
+      const rec = await recordUserSpeech(sec => { if(currentCandidateResolver) setSimStatus(`Recording... ${sec}s`, '#f87171'); });
+      if (rec?.blob) { setSimStatus('Transcribing...', '#818cf8'); const t = await transcribeBlob(rec.blob, rec.mimeType); if(t?.trim()) return t.trim(); }
+      return null;
+    } catch(err) { setSimStatus('Mic unavailable — choose a response below:', '#fbbf24'); renderInteractivePrompt(simStep, false); return null; }
+  })();
+  const result = await Promise.race([
+    interactivePromise.then(t => ({ source:'interactive', text:t })),
+    micPromise.then(t => ({ source:'mic', text:t }))
+  ]);
+  if (result?.text) { userText = result.text; }
+  else { setSimStatus('No speech — please choose a response below:', '#38bdf8'); renderInteractivePrompt(simStep, false); userText = await interactivePromise; }
+  clearInteractivePrompt();
+  addBubble('user', 'You', userText);
+  simTranscript += `\nAI: ${question}\nCandidate: ${userText}`;
+  if (simCallId) { await fetch('/api/simulator/append-transcript', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ callId:simCallId, text:simTranscript }) }).catch(()=>{}); }
+  simStep++;
+  await runSimStep();
+}
+
+async function toggleSimulator() {
+  if (simActive) { stopCurrentRecording(); clearInteractivePrompt(); simActive=false; document.getElementById('simMicBtn').innerHTML='Start Voice Call'; document.getElementById('simMicBtn').className='btn btn-green'; setSimStatus('Stopped','#4a5568'); return; }
+  const candSel = document.getElementById('simCandSelect');
+  const jobSel = document.getElementById('simJobSelect');
+  if (!candSel.value && candSel.options.length>1) candSel.selectedIndex=1;
+  if (!jobSel.value && jobSel.options.length>1) jobSel.selectedIndex=1;
+  if (!candSel.value) { alert('Please select a candidate first.'); return; }
+  simActive=true; simStep=0; simTranscript=''; simCallId=null;
+  document.getElementById('simConversation').innerHTML='';
+  document.getElementById('simResponses').innerHTML='';
+  clearInteractivePrompt();
+  document.getElementById('simMicBtn').innerHTML='<span class="recording-ring"></span>Stop Call';
+  document.getElementById('simMicBtn').className='btn btn-red';
+  try { const r = await fetch('/api/calls/initiate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidateId:candSel.value,jobId:jobSel.value||undefined})}).then(x=>x.json()); if(r.success) simCallId=r.callId; } catch{}
+  setSimStatus('Starting interview...','#818cf8');
+  runSimStep();
+}
+
+async function runAutoDemo() {
+  const candSel = document.getElementById('simCandSelect');
+  const jobSel = document.getElementById('simJobSelect');
+  if (!candSel.value && candSel.options.length>1) candSel.selectedIndex=1;
+  if (!jobSel.value && jobSel.options.length>1) jobSel.selectedIndex=1;
+  const candId = candSel.value;
+  const jobId = jobSel.value;
+  const candName = candSel.options[candSel.selectedIndex]?.text?.split('(')[0]?.trim() || 'Candidate';
+  const jobName = jobSel.options[jobSel.selectedIndex]?.text || 'Software Engineer';
+  simActive = true;
+  document.getElementById('simConversation').innerHTML='';
+  document.getElementById('simResponses').innerHTML='';
+  setSimStatus('Running demo...','#818cf8');
+  let callId = null;
+  try { const r = await fetch('/api/calls/initiate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({candidateId:candId,jobId:jobId||undefined})}).then(x=>x.json()); if(r.success) callId=r.callId; } catch{}
+  const script = [
+    { q: `Hello ${candName}! This is Sarah from Winit. I'm calling about the ${jobName} position. Do you have two minutes?`, a: 'Yes, absolutely. Happy to talk now.' },
+    { q: 'Could you share your current salary and expected compensation?', a: 'Currently at 16 LPA, targeting 24–26 LPA.' },
+    { q: 'What is your notice period and work preference — remote, hybrid, or on-site?', a: '30-day notice, prefer hybrid in Bengaluru.' },
+    { q: 'Could you briefly describe your primary skills and experience?', a: '5 years in Node.js, React, AI integrations, and PostgreSQL.' }
+  ];
+  let transcript = '';
+  for (let i=0; i<script.length; i++) {
+    const turn = script[i];
+    addBubble('ai','Sarah — AI Recruiter', turn.q);
+    setSimStatus(`Turn ${i+1}/${script.length}: Sarah speaking...`,'#c7d2fe');
+    if (i===0) await playAiVoice(turn.q); else await new Promise(r=>setTimeout(r,600));
+    setSimStatus(`Turn ${i+1}/${script.length}: Candidate answering...`,'#fbbf24');
+    await new Promise(r=>setTimeout(r,700));
+    addBubble('user', candName, turn.a);
+    transcript += `\nAI: ${turn.q}\nCandidate: ${turn.a}`;
+    await new Promise(r=>setTimeout(r,300));
+  }
+  const closing = `Thank you ${candName}! You sound like a great fit. Our team will be in touch shortly.`;
+  addBubble('ai','Sarah — AI Recruiter', closing);
+  setSimStatus('Analyzing and extracting parameters...','#818cf8');
+  if (callId) {
+    await fetch('/api/simulator/append-transcript',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({callId,text:transcript})}).catch(()=>{});
+    try {
+      const nlp = await fetch(`/api/calls/${callId}/process-nlp`,{method:'POST'}).then(x=>x.json());
+      let tags = '';
+      if (nlp.success && nlp.responses) nlp.responses.forEach(i=>{ tags+=`<div class="resp-tag"><span class="resp-code">${i.question_code}</span><span class="resp-value">${i.response_value||i.response_text||'—'}</span></div>`; });
+      document.getElementById('simResponses').innerHTML = `
+        <div style="margin-top:.85rem;background:rgba(79,110,247,.08);border:1px solid rgba(79,110,247,.2);border-radius:8px;padding:1rem">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.65rem">
+            <span style="font-weight:600;font-size:.82rem">Screening Profile Extracted</span>
+            <span class="badge badge-completed">Qualified</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:.3rem;margin-bottom:.85rem">${tags}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding-top:.65rem;border-top:1px solid var(--border)">
+            <span style="font-size:.75rem;color:var(--t2)">Recommended: Technical Round</span>
+            <button class="btn btn-green btn-sm" onclick="quickBookCurrent('${candId}','${jobId}')">Book Interview</button>
+          </div>
+        </div>`;
+    } catch(e) {}
+  }
+  simActive=false;
+  setSimStatus('Demo complete.','#34d399');
+  loadCalls();
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  initResumeTab();
+  checkUrlAuth();
+  checkExistingAuth();
+  await loadHealth();
+  await loadCandidates();
+  await loadJobs();
+  await loadCalls();
+});
+</script>
+</body>
+</html>

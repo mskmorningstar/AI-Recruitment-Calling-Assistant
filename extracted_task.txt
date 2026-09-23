@@ -1,0 +1,365 @@
+# AI Recruitment Calling Assistant
+## Overview
+The AI Recruitment Calling Assistant is a fully automated system that conducts outbound recruitment
+calls using AI voice technology. It integrates with multiple APIs to manage the entire recruitment
+calling workflow from candidate sourcing to interview scheduling.
+## Functional Scope
+### Core Features
+- **Automated Outbound Calls**: Uses AI voice to call shortlisted candidates
+- **Data Collection**: Gathers current salary, expected salary, notice period, skills confirmation,
+location, and work preferences
+- **Job Explanation**: Provides detailed job descriptions and company background from ATS data
+- **FAQ Handling**: Responds to candidate questions with pre-trained responses
+- **Interview Scheduling**: Automatically schedules interviews via Google Calendar or Microsoft
+Outlook
+- **Real-time Sync**: Syncs all data with ATS/CRM systems in real-time
+- **Complete Recording**: Stores transcripts, recordings, and structured answers for recruiter
+review
+## Workflow
+```mermaid
+graph TD
+A[Fetch Candidates & Jobs from ATS] --> B[Initiate Outbound Call via Twilio]
+B --> C[Play Dynamic AI Speech via ElevenLabs]
+C --> D[Capture Candidate Responses]
+D --> E[Convert Speech to Text via AssemblyAI]
+E --> F[Extract Structured Data via NLP]
+F --> G{Candidate Interested?}
+G -->|Yes| H[Schedule Interview via Calendar API]
+G -->|No| I[Log Response]
+H --> J[Sync Data Back to ATS]
+I --> J
+J --> K[Store All Interactions in Database]
+```
+## Database Schema
+### candidates
+| Field | Type | Description |
+|-------|------|-------------|
+| candidate_id (PK) | UUID | Primary key |
+| full_name | VARCHAR(150) | Candidate's full name |
+
+-- 1 of 9 --
+
+| phone_number | VARCHAR(20) | Contact phone number |
+| email | VARCHAR(150) | Email address |
+| source | VARCHAR(50) | Source of candidate (ATS, manual, etc.) |
+| ats_id | VARCHAR(50) | External ATS identifier |
+| created_at | TIMESTAMP | Record creation timestamp |
+### call_sessions
+| Field | Type | Description |
+|-------|------|-------------|
+| call_id (PK) | UUID | Primary key |
+| candidate_id (FK) | UUID | Foreign key to candidates table |
+| call_start_time | TIMESTAMP | Call initiation time |
+| call_end_time | TIMESTAMP | Call completion time |
+| call_status | VARCHAR(20) | Status (completed, failed, busy, etc.) |
+| recording_url | TEXT | URL to call recording |
+| transcript_text | TEXT | Full conversation transcript |
+| ai_confidence | DECIMAL(5,2) | AI confidence score for responses |
+| created_at | TIMESTAMP | Record creation timestamp |
+### candidate_responses
+| Field | Type | Description |
+|-------|------|-------------|
+| response_id (PK) | UUID | Primary key |
+| call_id (FK) | UUID | Foreign key to call_sessions table |
+| question_code | VARCHAR(50) | Standardized question identifier |
+| response_text | TEXT | Raw response text |
+| response_value | VARCHAR(100) | Parsed/normalized response value |
+| created_at | TIMESTAMP | Record creation timestamp |
+### jobs
+| Field | Type | Description |
+|-------|------|-------------|
+| job_id (PK) | UUID | Primary key |
+| title | VARCHAR(150) | Job title |
+| company_name | VARCHAR(150) | Company name |
+| location | VARCHAR(150) | Job location |
+| employment_type | VARCHAR(50) | Full-time, part-time, contract, etc. |
+| salary_range | VARCHAR(50) | Salary range |
+| jd_text | TEXT | Complete job description |
+| created_at | TIMESTAMP | Record creation timestamp |
+### interview_schedules
+| Field | Type | Description |
+|-------|------|-------------|
+| schedule_id (PK) | UUID | Primary key |
+| candidate_id (FK) | UUID | Foreign key to candidates table |
+| job_id (FK) | UUID | Foreign key to jobs table |
+| interview_date | DATE | Interview date |
+
+-- 2 of 9 --
+
+| interview_time | TIME | Interview time |
+| interviewer_name | VARCHAR(150) | Name of interviewer |
+| calendar_event_id | VARCHAR(150) | External calendar event ID |
+| status | VARCHAR(20) | scheduled, completed, cancelled, etc. |
+| created_at | TIMESTAMP | Record creation timestamp |
+### recruiters
+| Field | Type | Description |
+|-------|------|-------------|
+| recruiter_id (PK) | UUID | Primary key |
+| full_name | VARCHAR(150) | Recruiter's full name |
+| phone_number | VARCHAR(20) | Contact phone number |
+| email | VARCHAR(150) | Email address |
+| company_name | VARCHAR(150) | Company name |
+| created_at | TIMESTAMP | Record creation timestamp |
+## Real-Time API Mapping
+### Data Sources and Operations
+| Table | Operation | API/Source | Endpoint |
+|-------|-----------|------------|----------|
+| candidates | Fetch | ATS API | GET /candidates |
+| candidates | Insert | CSV Upload | POST /candidates/upload |
+| candidates | Update | ATS API | PATCH /candidates/{id} |
+| call_sessions | Create | Twilio | POST /Calls |
+| call_sessions | Status | Twilio | GET /Calls/{SID} |
+| call_sessions | Recording | Twilio | GET /Recordings |
+| call_sessions | Transcription | AssemblyAI/Deepgram | POST /transcript |
+| candidate_responses | Extract | NLP Model | Internal processing |
+| jobs | Fetch | ATS API | GET /jobs |
+| jobs | Details | ATS API | GET /jobs/{id} |
+| interview_schedules | Create | Google Calendar | events.insert |
+| interview_schedules | Availability | Google Calendar | freeBusy.query |
+| interview_schedules | Update | Calendar API | events.update |
+| recruiters | Fetch | ATS API | GET /recruiters |
+| recruiters | Update | ATS API | PATCH /recruiters/{id} |
+## Technical Architecture
+### Technology Stack
+- **Backend**: Node.js with Express.js
+- **Database**: PostgreSQL with exact schema implementation
+- **Telephony**: Twilio for calling and recording
+- **Text-to-Speech**: ElevenLabs for dynamic voice generation
+- **Speech-to-Text**: AssemblyAI for transcription
+- **NLP Processing**: OpenAI/Claude for Q&A parsing from transcripts
+- **Calendar Integration**: Google Calendar API / Microsoft Graph
+
+-- 3 of 9 --
+
+- **ATS Integration**: Greenhouse, Zoho Recruit, or Lever APIs
+- **Frontend Dashboard**: Optional React-based interface for call management
+### System Components
+```mermaid
+graph TB
+A[Frontend Dashboard] --> B[Express.js API Server]
+B --> C[PostgreSQL Database]
+B --> D[Twilio API]
+B --> E[ElevenLabs API]
+B --> F[AssemblyAI API]
+B --> G[OpenAI API]
+B --> H[Google Calendar API]
+B --> I[ATS API Greenhouse/Zoho]
+D --> J[Phone Calls]
+E --> K[Voice Generation]
+F --> L[Speech Transcription]
+G --> M[NLP Processing]
+H --> N[Interview Scheduling]
+I --> O[Candidate/Job Data]
+```
+## API Endpoints
+### Candidate Management
+- `GET /api/candidates` - Fetch all candidates from ATS
+- `GET /api/candidates/:id` - Get specific candidate details
+- `POST /api/candidates/upload` - Upload candidates via CSV
+- `PATCH /api/candidates/:id` - Update candidate information
+- `DELETE /api/candidates/:id` - Remove candidate (GDPR compliance)
+### Job Management
+- `GET /api/jobs` - Fetch all jobs from ATS
+- `GET /api/jobs/:id` - Get specific job details
+- `POST /api/jobs/sync` - Sync jobs from ATS
+### Call Management
+- `POST /api/calls/initiate` - Start outbound call to candidate
+- `GET /api/calls/:id/status` - Get call status
+- `POST /api/calls/webhook` - Twilio webhook for call events
+- `GET /api/calls/:id/recording` - Get call recording
+- `GET /api/calls/:id/transcript` - Get call transcript
+### Interview Scheduling
+- `GET /api/interviews/availability` - Check interviewer availability
+- `POST /api/interviews/schedule` - Schedule new interview
+
+-- 4 of 9 --
+
+- `PATCH /api/interviews/:id` - Update interview details
+- `DELETE /api/interviews/:id` - Cancel interview
+### Analytics & Reporting
+- `GET /api/analytics/calls` - Call statistics and metrics
+- `GET /api/analytics/candidates` - Candidate response analytics
+- `GET /api/reports/transcripts` - Transcript analysis reports
+## Environment Configuration
+### Required Environment Variables
+```bash
+# Server Configuration
+PORT=3000
+NODE_ENV=production
+# Database Configuration
+DATABASE_URL=postgresql://postgres.zmjnlmpdqntcxpqqjnds:recruitmentcallingassistant@aws-1-
+ap-southeast-1.pooler.supabase.com:6543/postgres
+DB_NAME=recruitmentcallingassistant
+DB_PASSWORD=recruitmentcallingassistant
+# Twilio Configuration
+TWILIO_ACCOUNT_SID=your_twilio_account_sid
+TWILIO_AUTH_TOKEN=your_twilio_auth_token
+TWILIO_PHONE_NUMBER=+1234567890
+TWILIO_WEBHOOK_URL=https://yourdomain.com/api/calls/webhook
+# ElevenLabs Configuration
+ELEVENLABS_API_KEY=your_elevenlabs_api_key
+ELEVENLABS_VOICE_ID=your_preferred_voice_id
+# AssemblyAI Configuration
+ASSEMBLYAI_API_KEY=your_assemblyai_api_key
+# OpenAI Configuration (for NLP processing)
+OPENAI_API_KEY=your_openai_api_key
+# Google Calendar Configuration
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_REFRESH_TOKEN=your_google_refresh_token
+GOOGLE_REDIRECT_URI=https://yourdomain.com/auth/google/callback
+# ATS API Configuration (Greenhouse example)
+GREENHOUSE_API_KEY=your_greenhouse_api_key
+GREENHOUSE_BASE_URL=https://harvest.greenhouse.io/v1
+
+-- 5 of 9 --
+
+# Security
+JWT_SECRET=your_jwt_secret_key
+ENCRYPTION_KEY=your_32_character_encryption_key
+```
+## Development Rules
+### Core Principles
+1. **No Mock Data**: Every function must use real API requests
+2. **Direct API Storage**: Store all responses directly from APIs into database
+3. **Secure Authentication**: Handle API auth securely via environment variables
+4. **Error Handling**: Implement retry logic and comprehensive error handling
+5. **GDPR Compliance**: Ensure personal data storage meets privacy regulations
+6. **Real-time Processing**: All operations must be real-time with live data
+7. **Production Ready**: Code must be ready to run with only .env configuration
+### API Integration Requirements
+- All database writes must originate from real API responses
+- No hardcoded values or placeholder responses
+- Implement proper rate limiting and retry mechanisms
+- Use production endpoints for all external services
+- Maintain audit logs for all API interactions
+## Installation & Setup
+### Prerequisites
+- Node.js 18+
+- Supabase PostgreSQL Database (configured)
+- Twilio Account with phone number
+- ElevenLabs API access
+- AssemblyAI API access
+- OpenAI API access
+- Google Cloud Platform account (for Calendar API)
+- ATS API credentials (Greenhouse/Zoho/Lever)
+### Database Connection Details
+- **Connection String**: `postgresql://postgres.zmjnlmpdqntcxpqqjnds:[YOUR-PASSWORD]@aws-1-
+ap-southeast-1.pooler.supabase.com:6543/postgres`
+- **Database Name**: `recruitmentcallingassistant`
+- **Password**: `recruitmentcallingassistant`
+- **Host**: `aws-1-ap-southeast-1.pooler.supabase.com`
+- **Port**: `6543`
+- **Provider**: Supabase (PostgreSQL)
+### Installation Steps
+1. **Clone and Install Dependencies**
+
+-- 6 of 9 --
+
+```bash
+git clone <repository-url>
+cd ai-recruitment-calling-assistant
+npm install
+```
+2. **Database Setup**
+```bash
+# Using Supabase PostgreSQL - No local setup required
+# Database: recruitmentcallingassistant
+# Connection: postgresql://postgres.zmjnlmpdqntcxpqqjnds:recruitmentcallingassistant@aws-1-ap-
+southeast-1.pooler.supabase.com:6543/postgres
+# Run migrations to create tables
+npm run migrate
+```
+3. **Environment Configuration**
+```bash
+# Copy environment template
+cp .env.example .env
+# Configure all required environment variables
+```
+4. **Start the Application**
+```bash
+# Development mode
+npm run dev
+# Production mode
+npm start
+```
+## Usage Examples
+### Initiating a Call
+```javascript
+POST /api/calls/initiate
+{
+"candidateId": "123e4567-e89b-12d3-a456-426614174000",
+"jobId": "456e7890-e89b-12d3-a456-426614174001"
+}
+```
+### Uploading Candidates
+```javascript
+POST /api/candidates/upload
+
+-- 7 of 9 --
+
+Content-Type: multipart/form-data
+File: candidates.csv
+```
+### Scheduling Interview
+```javascript
+POST /api/interviews/schedule
+{
+"candidateId": "123e4567-e89b-12d3-a456-426614174000",
+"jobId": "456e7890-e89b-12d3-a456-426614174001",
+"interviewDate": "2024-01-15",
+"interviewTime": "14:00:00",
+"interviewerEmail": "recruiter@company.com"
+}
+```
+## Security & Compliance
+### Data Protection
+- All personal data encrypted at rest
+- Secure API key management via environment variables
+- GDPR-compliant data retention policies
+- Audit logging for all data access
+### API Security
+- Rate limiting on all endpoints
+- Input validation and sanitization
+- SQL injection prevention
+- Cross-origin request restrictions
+## Monitoring & Logging
+### Key Metrics
+- Call success rates
+- Transcription accuracy
+- Response parsing confidence
+- API response times
+- Interview scheduling success rates
+### Log Categories
+- API request/response logs
+- Call session logs
+- Error logs with stack traces
+- Performance metrics
+- Security event logs
+## Support & Maintenance
+
+-- 8 of 9 --
+
+### Regular Maintenance Tasks
+- Database backup and cleanup
+- API credential rotation
+- Log file management
+- Performance optimization
+- Security updates
+### Troubleshooting Common Issues
+- API rate limit exceeded
+- Database connection failures
+- Webhook delivery failures
+- Calendar synchronization issues
+- Audio quality problems
+## License & Legal
+This system handles personal data and must comply with:
+- GDPR (General Data Protection Regulation)
+- Local privacy laws
+- Industry-specific regulations
+- Company data protection policies
+Ensure proper consent mechanisms and data retention policies are implemented before production
+deployment.
+
+-- 9 of 9 --
+
