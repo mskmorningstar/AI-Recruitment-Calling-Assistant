@@ -1,4 +1,7 @@
-/node_modules
-
+node_modules/
 .env
-.env.example
+.DS_Store
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/audio_cache/

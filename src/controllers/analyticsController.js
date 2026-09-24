@@ -6,13 +6,13 @@ const { query } = require('../config/database');
  */
 async function getCallAnalytics(req, res, next) {
   try {
-    const totalCallsRes = await query('SELECT COUNT(*) FROM call_sessions');
+    const totalCallsRes = await query('SELECT COUNT(*) AS count FROM call_sessions');
     const statusCountsRes = await query(`
       SELECT call_status, COUNT(*) as count 
       FROM call_sessions 
       GROUP BY call_status
     `);
-    const completedCountRes = await query("SELECT COUNT(*) FROM call_sessions WHERE call_status = 'completed'");
+    const completedCountRes = await query("SELECT COUNT(*) AS count FROM call_sessions WHERE call_status = 'completed'");
     const mode = require('../config/database').getMode();
     const durationSql = mode === 'sqlite'
       ? `SELECT AVG(strftime('%s', call_end_time) - strftime('%s', call_start_time)) as avg_duration_sec
@@ -51,8 +51,8 @@ async function getCallAnalytics(req, res, next) {
  */
 async function getCandidateAnalytics(req, res, next) {
   try {
-    const totalCandidates = await query('SELECT COUNT(*) FROM candidates');
-    const totalInterviews = await query('SELECT COUNT(*) FROM interview_schedules');
+    const totalCandidates = await query('SELECT COUNT(*) AS count FROM candidates');
+    const totalInterviews = await query('SELECT COUNT(*) AS count FROM interview_schedules');
 
     // Aggregate extracted responses by question code
     const questionBreakdown = await query(`

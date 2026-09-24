@@ -1,0 +1,52 @@
+services:
+  - type: web
+    name: ai-recruitment-calling-assistant
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ENCRYPTION_KEY
+        sync: false
+      # After first deploy, set to your Render URL, e.g. https://ai-recruitment-calling-assistant.onrender.com
+      - key: PUBLIC_URL
+        sync: false
+      - key: GOOGLE_REDIRECT_URI
+        sync: false
+      - key: TWILIO_WEBHOOK_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: TELEPHONY_PROVIDER
+        value: vapi
+      - key: VAPI_API_KEY
+        sync: false
+      - key: VAPI_PHONE_NUMBER_ID
+        sync: false
+      - key: ELEVENLABS_API_KEY
+        sync: false
+      - key: ELEVENLABS_VOICE_ID
+        sync: false
+      - key: ELEVENLABS_MODEL_ID
+        sync: false
+      - key: ASSEMBLYAI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REFRESH_TOKEN
+        sync: false
+      - key: GOOGLE_CALENDAR_ID
+        sync: false
